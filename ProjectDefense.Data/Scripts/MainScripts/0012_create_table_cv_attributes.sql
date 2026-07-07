@@ -9,7 +9,12 @@ create table cv_attributes(
     value_boolean       boolean,
     value_option_id     int references attribute_options(id),
     value_content_id    bigint references contents(id),
-    primary key (cv_id, attribute_id)
+    primary key (cv_id, attribute_id),
+
+    created_user_id     uuid not null,
+    created_date_time   timestamptz not null default now(),
+	modified_user_id    uuid null,
+    modified_date_time  timestamptz null
 );
 
 create index ix_cv_attributes_numeric on cv_attributes(attribute_id, value_numeric) where value_numeric is not null;

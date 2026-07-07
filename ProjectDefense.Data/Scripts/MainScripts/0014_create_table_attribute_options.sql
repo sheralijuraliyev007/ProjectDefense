@@ -5,5 +5,10 @@ create table attribute_options(
     sort_order    int not null default 0,
     unique (attribute_id, label),
 
+    created_user_id     uuid not null,
+    created_date_time   timestamptz not null default now(),
+	modified_user_id    uuid null,
+    modified_date_time  timestamptz null,
+
     constraint uq_attribute_options_attribute_id_label unique (attribute_id, label)
 );

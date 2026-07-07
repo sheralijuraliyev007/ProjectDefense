@@ -11,7 +11,12 @@ create table user_attributes(
     value_content_id    bigint references contents(id),   
     version             int not null default 1,
     updated_at          timestamp not null default now(),
-    primary key (user_id, attribute_id)
+    primary key (user_id, attribute_id),
+
+    created_user_id     uuid not null,
+    created_date_time   timestamptz not null default now(),
+	modified_user_id    uuid null,
+    modified_date_time  timestamptz null
 );
 create index ix_user_attributes_numeric on user_attributes(attribute_id, value_numeric) where value_numeric is not null;
 create index ix_user_attributes_boolean on user_attributes(attribute_id, value_boolean) where value_boolean is not null;

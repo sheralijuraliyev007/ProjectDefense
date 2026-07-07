@@ -7,7 +7,11 @@ create table contents(
     width              int,
     height             int,
     size_bytes         bigint not null check (size_bytes > 0),
-    uploaded_by        uuid not null references users(id),
-    created_at         timestamp not null default now()
+    
+    created_user_id     uuid not null,
+    created_date_time   timestamptz not null default now(),
+	modified_user_id    uuid null,
+    modified_date_time  timestamptz null
+    
 );
 create index ix_contents_uploaded_by on contents(uploaded_by);
