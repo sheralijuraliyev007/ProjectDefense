@@ -1,0 +1,10 @@
+create table positions(
+    id                serial primary key,
+    title             varchar(200) not null,
+    short_description varchar(500),
+    is_public         boolean not null default true,  
+    max_projects      int not null default 5 check (max_projects > 0),
+    status_code         smallint not null references info.info_position_status(code) default 1,
+    version           int not null default 1,
+);
+create index ix_positions_status on positions(status_code);

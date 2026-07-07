@@ -1,0 +1,5 @@
+create table user_roles(
+    user_id  uuid not null references users(id) on delete cascade,
+    role_code  smallint not null references info.info_role(code),
+    primary key (user_id, role_code)
+);

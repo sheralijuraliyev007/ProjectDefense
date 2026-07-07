@@ -1,3 +1,5 @@
+create schema info;
+
 create table info.info_table(
 	id		smallserial primary key,
 	code	smallint unique not null check(code > 0),
