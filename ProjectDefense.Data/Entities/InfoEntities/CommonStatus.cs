@@ -4,8 +4,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ProjectDefense.Data.Entities.InfoEntities
 {
-    [Table("info_position_status", Schema = "info")]
-    public class PositionStatus : BaseInfoEntity
+    [Table("info_common_status", Schema = "info")]
+    public class CommonStatus : BaseInfoEntity
     {
     }
 }
