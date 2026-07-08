@@ -1,9 +1,11 @@
 ﻿using ProjectDefense.Data.Entities.BaseEntities;
+using ProjectDefense.Data.Entities.InfoEntities;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ProjectDefense.Data.Entities.MainEntities
 {
+    [Table("users")]
     public class User : BaseEntity
     {
         [Key]
@@ -22,6 +24,9 @@ namespace ProjectDefense.Data.Entities.MainEntities
         [Required]
         [Column("status_code")]
         public short StatusCode { get; set; }
+
+        [ForeignKey(nameof(StatusCode))]
+        public virtual UserStatus? Status { get; set; }
 
         [Required]
         [Column("version")]
