@@ -1,4 +1,5 @@
 create table user_attributes(
+    id  		        serial primary key,   
     user_id             uuid not null references users(id) on delete cascade,
     attribute_id        int not null references attributes(id) on delete cascade,
     value_generic       text,           
@@ -11,7 +12,7 @@ create table user_attributes(
     value_content_id    bigint references contents(id),   
     version             int not null default 1,
     updated_at          timestamp not null default now(),
-    primary key (user_id, attribute_id),
+    
 
     created_user_id     uuid not null,
     created_date_time   timestamptz not null default now(),
