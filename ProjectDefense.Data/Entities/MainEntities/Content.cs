@@ -1,4 +1,5 @@
-﻿using ProjectDefense.Data.Entities.InfoEntities;
+﻿using ProjectDefense.Data.Entities.BaseEntities;
+using ProjectDefense.Data.Entities.InfoEntities;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -6,7 +7,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace ProjectDefense.Data.Entities.MainEntities
 {
     [Table("contents")]
-    public class Content
+    public class Content : BaseEntity
     {
         [Key]
         [Column("id")]

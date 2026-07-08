@@ -1,4 +1,5 @@
 create table cv_attributes(
+    id                  serial primary key,
     cv_id               bigint not null references cv(id) on delete cascade,
     attribute_id        int not null references attributes(id) on delete cascade,
     value_generic       text,           
@@ -9,7 +10,7 @@ create table cv_attributes(
     value_boolean       boolean,
     value_option_id     int references attribute_options(id),
     value_content_id    bigint references contents(id),
-    primary key (cv_id, attribute_id),
+    
 
     created_user_id     uuid not null,
     created_date_time   timestamptz not null default now(),
