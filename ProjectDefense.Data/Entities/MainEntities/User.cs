@@ -15,10 +15,16 @@ namespace ProjectDefense.Data.Entities.MainEntities
         [Required]
         public string Email { get; set; } = string.Empty;
 
-    //    id uuid primary key,
-    //email                varchar(255) not null unique,
-    //is_verified boolean not null default false,
-    //status_code smallint not null references info.info_user_status(code) default 1,
-    //version int not null default 1,
+        [Required]
+        [Column("is_verified")]
+        public bool IsVerified { get; set; }
+
+        [Required]
+        [Column("status_code")]
+        public short StatusCode { get; set; }
+
+        [Required]
+        [Column("version")]
+        public int Version { get; set; }
     }
 }
