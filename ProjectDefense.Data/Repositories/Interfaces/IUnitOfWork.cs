@@ -21,6 +21,7 @@ namespace ProjectDefense.Data.Repositories.Interfaces
         IBaseRepository<CVAttribute> CVAttributeRepository();
         IBaseRepository<Position> PositionRepository();
         IBaseRepository<PositionAttribute> PositionAttributeRepository();
+        IBaseRepository<PositionProjectTag> PositionProjectTagRepository();
         IBaseRepository<Project> ProjectRepository();
         IBaseRepository<ProjectTag> ProjectTagRepository();
         IBaseRepository<Tag> TagRepository();
