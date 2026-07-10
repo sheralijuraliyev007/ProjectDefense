@@ -37,7 +37,7 @@ namespace ProjectDefense.Data.Repositories
             context.Set<T>().RemoveRange(entities);
         }
 
-        public IQueryable<T> GetAll(Expression<Func<T, object>>[] includes)
+        public IQueryable<T> GetAll(params Expression<Func<T, object>>[] includes)
         {
             IQueryable<T> query = context.Set<T>();
 
@@ -46,6 +46,12 @@ namespace ProjectDefense.Data.Repositories
                 query = query.Include(include);
             }
             return query;
+        }
+
+        public async Task<T?> GetByEmail<TE>(TE email)
+        {
+            var entityt = await context.Set<T>().FindAsync(email);
+            return entityt;
         }
 
         public async Task<T?> GetById<TK>(TK id)

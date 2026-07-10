@@ -8,9 +8,10 @@ namespace ProjectDefense.Data.Repositories.Interfaces
 {
     public interface IBaseRepository<T> where T : class
     {
-        IQueryable<T> GetAll(Expression<Func<T, object>>[] includes);
+        IQueryable<T> GetAll(params Expression<Func<T, object>>[] includes);
 
         Task<T?> GetById<TK>(TK id);
+        Task<T?> GetByEmail<TE>(TE email);
 
         Task Add(T entity);
 

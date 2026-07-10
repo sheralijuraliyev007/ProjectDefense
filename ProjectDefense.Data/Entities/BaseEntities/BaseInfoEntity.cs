@@ -1,9 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using ProjectDefense.Data.Entities.InfoEntities;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ProjectDefense.Data.Entities.BaseEntities
 {
-    public class BaseInfoEntity : BaseEntity
+    public class BaseInfoEntity : BaseEntity, IHasCommonAttributes
     {
         [Key]
         [Column("id")]
@@ -17,6 +18,6 @@ namespace ProjectDefense.Data.Entities.BaseEntities
         [Column("name")]
         [MaxLength(50)]
         public string Name { get; set; }  = string.Empty;
-
+        
     }
 }

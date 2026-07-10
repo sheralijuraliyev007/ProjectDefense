@@ -3,6 +3,7 @@ create table users(
     email                           varchar(255) not null unique,
     is_verified                     boolean not null default false,
     status_code                     smallint not null references info.info_user_status(code) default 1,
+    password                        varchar(255) not null,
 
     version                         int not null default 1,
     refresh_token_expiry_time       timestamptz,

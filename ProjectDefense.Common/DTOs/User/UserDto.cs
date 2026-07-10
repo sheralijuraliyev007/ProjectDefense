@@ -1,4 +1,4 @@
-﻿namespace ProjectDefense.Common.DTOs
+﻿namespace ProjectDefense.Common.DTOs.User
 {
     public class UserDto
     {
