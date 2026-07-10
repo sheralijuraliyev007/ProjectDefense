@@ -9,7 +9,7 @@ create table position_rules(
     value_boolean    boolean,
     value_option_id  int,
 
-    created_user_id     uuid not null,
+    created_user_id     uuid references users(id),
     created_date_time   timestamptz not null default now(),
 	modified_user_id    uuid null,
     modified_date_time  timestamptz null,

@@ -7,7 +7,7 @@ create table positions(
     status_code         smallint not null references info.info_common_status(code) default 1,
     version           int not null default 1,
 
-    created_user_id     uuid not null,
+    created_user_id     uuid references users(id),
     created_date_time   timestamptz not null default now(),
 	modified_user_id    uuid null,
     modified_date_time  timestamptz null

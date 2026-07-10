@@ -31,5 +31,9 @@ namespace ProjectDefense.Data.Entities.MainEntities
         [Required]
         [Column("version")]
         public int Version { get; set; }
+
+        [Column("refresh_token_expiry_time")]
+        [Required]
+        public DateTimeOffset RefreshTokenExpireTime { get; set; }
     }
 }

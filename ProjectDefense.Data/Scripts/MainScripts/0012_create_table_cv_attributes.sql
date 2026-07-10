@@ -12,7 +12,7 @@ create table cv_attributes(
     value_content_id    bigint references contents(id),
     
 
-    created_user_id     uuid not null,
+    created_user_id     uuid references users(id),
     created_date_time   timestamptz not null default now(),
 	modified_user_id    uuid null,
     modified_date_time  timestamptz null

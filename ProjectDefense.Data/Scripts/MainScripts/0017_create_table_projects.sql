@@ -7,7 +7,7 @@ create table projects(
     description   varchar(2500) not null,          
     version       int not null default 1,
 
-    created_user_id     uuid not null,
+    created_user_id     uuid references users(id),
     created_date_time   timestamptz not null default now(),
 	modified_user_id    uuid null,
     modified_date_time  timestamptz null
