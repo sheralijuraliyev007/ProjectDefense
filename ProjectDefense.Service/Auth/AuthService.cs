@@ -65,7 +65,7 @@ namespace ProjectDefense.Service.Auth
                     IsVerified = socialInfo.EmailVerified,
                     CreatedUserId = null   // self-registered
                 };
-                await unitOfWork.UserRepository().AddAsync(user);
+                await unitOfWork.UserRepository().Add(user);
                 
                 await unitOfWork.UserRoleRepository().AssignRoleAsync(user.Id, RoleConstants.CandidateRoleCode);
                 await unitOfWork.SaveChangesAsync();
