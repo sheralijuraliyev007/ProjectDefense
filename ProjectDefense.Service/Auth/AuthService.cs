@@ -1,4 +1,5 @@
-﻿using ProjectDefense.Common.DTOs.Auth;
+﻿using ProjectDefense.Common.Constants;
+using ProjectDefense.Common.DTOs.Auth;
 using ProjectDefense.Common.DTOs.User;
 using ProjectDefense.Common.Models.Auth;
 using ProjectDefense.Data.Entities.MainEntities;
@@ -6,15 +7,11 @@ using ProjectDefense.Data.Repositories.Interfaces;
 using ProjectDefense.Service.Auth.Interfaces;
 using ProjectDefense.Service.Infrastructure.Interfaces;
 using StatusGeneric;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
 
 namespace ProjectDefense.Service.Auth
 {
-    internal class AuthService(IUnitOfWork unitOfWork, IEnumerable<ISocialLoginProvider> socialLoginProviders) : StatusGenericHandler, IAuthService
+    internal class AuthService(IUnitOfWork unitOfWork, IEnumerable<ISocialLoginProvider> socialLoginProviders, JwtService jwtService) : StatusGenericHandler, IAuthService
     {
         public Task<TokenDto?> LoginAsync(LoginModel loginModel)
         {
@@ -38,45 +35,63 @@ namespace ProjectDefense.Service.Auth
 
         public async Task<TokenDto?> SocialLoginAsync(SocialLoginModel model)
         {
-            var provider = socialLoginProviders.FirstOrDefault(p => p.ProviderName == model.Provider);
-            if (provider is null)
-            {
-                AddError("Unsupported login provider.");
-                return null;
-            }
+            var provider = GetProvider(model.Provider);
+            if (provider is null) return null;
 
-            SocialUserInfoDto socialInfo;
-            try
-            {
-                socialInfo = await provider.ValidateTokenAsync(model.IdToken);
-            }
-            catch (Exception)
-            {
-                AddError("Invalid or expired social login token.");
-                return null;
-            }
+            var socialInfo = await ValidateSocialToken(provider, model.IdToken);
+            if (socialInfo is null) return null;
 
-            var user = await unitOfWork.UserRepository().GetByEmail(socialInfo.Email);
-            if (user is null)
-            {
-                user = new User
-                {
-                    Email = socialInfo.Email,
-                    IsVerified = socialInfo.EmailVerified,
-                    CreatedUserId = null   // self-registered
-                };
-                await unitOfWork.UserRepository().Add(user);
-                
-                await unitOfWork.UserRoleRepository().AssignRoleAsync(user.Id, RoleConstants.CandidateRoleCode);
-                await unitOfWork.SaveChangesAsync();
-            }
-
-            return await GenerateTokenAsync(user);
+            var user = await FindOrCreateUser(socialInfo);
+            return jwtService.GenerateToken(user);
         }
 
         public Task<string> VerifyEmail(Guid verificationToken)
         {
             throw new NotImplementedException();
+        }
+
+
+        private ISocialLoginProvider? GetProvider(string providerName)
+        {
+            var provider = socialLoginProviders.FirstOrDefault(p => p.ProviderName == providerName);
+            if (provider is null) AddError("Unsupported provider");
+            return provider;
+
+        }
+        
+        private async Task<SocialUserInfoDto?> ValidateSocialToken(ISocialLoginProvider provider, string idToken)
+        {
+            try
+            {
+                return await provider.ValidateTokenAsync(idToken);
+            }
+            catch(Exception)
+            {
+                AddError("Invalid token");
+                return null;
+            }
+
+         }
+
+        private async Task<User> FindOrCreateUser(SocialUserInfoDto socialUserInfoDto)
+        {
+            var user = await unitOfWork.UserRepository().GetByEmail(socialUserInfoDto.Email);
+            if (user != null) return user;
+
+            user = new User
+            {
+                Email = socialUserInfoDto.Email,
+                IsVerified = socialUserInfoDto.EmailVerified,
+            };
+            await unitOfWork.UserRepository().Add(user);
+            await unitOfWork.SaveChanges();
+
+            var userRole = new UserRole { UserId = user.Id, RoleCode = RoleConstants.CandidateCode};
+            await unitOfWork.UserRoleRepository().Add(userRole);
+            await unitOfWork.SaveChanges();
+
+            user.UserRoles.Add(userRole);   
+            return user;
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using ProjectDefense.Data.Context;
+﻿using Microsoft.EntityFrameworkCore.Storage;
+using ProjectDefense.Data.Context;
 using ProjectDefense.Data.Entities.InfoEntities;
 using ProjectDefense.Data.Entities.MainEntities;
 using ProjectDefense.Data.Repositories.Interfaces;
@@ -27,7 +28,7 @@ namespace ProjectDefense.Data.Repositories
         IBaseRepository<Project> projectRepository,
         IBaseRepository<ProjectTag> projectTagRepository,
         IBaseRepository<Tag> tagRepository,
-        IBaseRepository<User> userRepository,
+        IUserRepository userRepository,
         IBaseRepository<UserAttribute> userAttributeRepository,
         IBaseRepository<UserLike> userLikeRepository,
         IBaseRepository<UserRole> userRoleRepository)
@@ -93,13 +94,18 @@ namespace ProjectDefense.Data.Repositories
         public IBaseRepository<UserLike> UserLikeRepository() =>
             userLikeRepository ?? new BaseRepository<UserLike>(context);
 
-        public IBaseRepository<User> UserRepository() =>
-            userRepository ?? new BaseRepository<User>(context);
+        public IUserRepository UserRepository() =>
+            userRepository ?? new UserRepository(context);
 
         public IBaseRepository<UserRole> UserRoleRepository() =>
             userRoleRepository ?? new BaseRepository<UserRole>(context);
 
         public IBaseRepository<UserStatus> UserStatusRepository() =>
             userStatusRepository ?? new BaseRepository<UserStatus>(context);
+
+        public async Task SaveChanges() => await context.SaveChangesAsync();
+
+        public IDbContextTransaction BeginTransaction() => context.Database.BeginTransaction();
+        public IDbContextTransaction? CurrentTransaction() => context.Database.CurrentTransaction;
     }
 }

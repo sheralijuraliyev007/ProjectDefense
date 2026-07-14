@@ -1,39 +1,39 @@
-﻿using ProjectDefense.Data.Entities.BaseEntities;
+﻿using Microsoft.EntityFrameworkCore;
+using ProjectDefense.Data.Entities.BaseEntities;
 using ProjectDefense.Data.Entities.InfoEntities;
+using ProjectDefense.Data.Entities.MainEntities;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Xml.Linq;
 
-namespace ProjectDefense.Data.Entities.MainEntities
+[Table("users")]
+[Index(nameof(StatusCode), Name = "ix_users_status")]
+public class User : BaseEntity
 {
-    [Table("users")]
-    public class User : BaseEntity
-    {
-        [Key]
-        [Column("users")]
-        public Guid Id { get; set; }
+    [Key]
+    [Column("id")]
+    public Guid Id { get; set; }
 
-        [Column("email")]
-        [MaxLength(255)]
-        [Required]
-        public string Email { get; set; } = string.Empty;
+    [Required]
+    [MaxLength(255)]
+    [Column("email")]
+    public string Email { get; set; } = null!;
 
-        [Required]
-        [Column("is_verified")]
-        public bool IsVerified { get; set; }
+    [MaxLength(255)]
+    [Column("password_hash")]
+    public string? PasswordHash { get; set; }   
 
-        [Required]
-        [Column("status_code")]
-        public short StatusCode { get; set; }
+    [Column("is_verified")]
+    public bool IsVerified { get; set; }
 
-        [ForeignKey(nameof(StatusCode))]
-        public virtual UserStatus? Status { get; set; }
+    [Column("status_code")]
+    public short StatusCode { get; set; }
+    [ForeignKey(nameof(StatusCode))]
+    public virtual UserStatus? Status { get; set; }
 
-        [Required]
-        [Column("version")]
-        public int Version { get; set; }
+    [Column("version")]
+    public int Version { get; set; } = 1;
 
-        [Column("refresh_token_expiry_time")]
-        [Required]
-        public DateTimeOffset RefreshTokenExpireTime { get; set; }
-    }
+    [InverseProperty(nameof(UserRole.User))]
+    public virtual List<UserRole> UserRoles { get; set; } = new();
 }

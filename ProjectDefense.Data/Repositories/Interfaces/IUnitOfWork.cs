@@ -1,4 +1,5 @@
 ﻿
+using Microsoft.EntityFrameworkCore.Storage;
 using ProjectDefense.Data.Entities.InfoEntities;
 using ProjectDefense.Data.Entities.MainEntities;
 
@@ -25,9 +26,14 @@ namespace ProjectDefense.Data.Repositories.Interfaces
         IBaseRepository<Project> ProjectRepository();
         IBaseRepository<ProjectTag> ProjectTagRepository();
         IBaseRepository<Tag> TagRepository();
-        IBaseRepository<User> UserRepository();
+        IUserRepository UserRepository();
         IBaseRepository<UserAttribute> UserAttributeRepository();
         IBaseRepository<UserLike> UserLikeRepository();
         IBaseRepository<UserRole> UserRoleRepository();
+
+        Task SaveChanges();
+
+        IDbContextTransaction BeginTransaction();
+        IDbContextTransaction? CurrentTransaction();
     }
 }

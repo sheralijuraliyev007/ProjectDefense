@@ -48,12 +48,6 @@ namespace ProjectDefense.Data.Repositories
             return query;
         }
 
-        public async Task<T?> GetByEmail<TE>(TE email)
-        {
-            var entityt = await context.Set<T>().FindAsync(email);
-            return entityt;
-        }
-
         public async Task<T?> GetById<TK>(TK id)
         {
             var entity = await context.Set<T>().FindAsync(id);
