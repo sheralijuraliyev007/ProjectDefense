@@ -12,11 +12,13 @@ namespace ProjectDefense.Common.Extensions
             return entity;
         }
 
-        public static TDto MapToDto<TDto, TEntity>(this TEntity entity, TypeAdapterConfig? config = null)
+        public static TDto MapToDto<TEntity, TDto>(
+            this TEntity source,
+            TypeAdapterConfig? config = null)
         {
-            var dto = config is null ? entity.Adapt<TDto>()
-                : entity.Adapt<TDto>(config);
-            return dto;
+            return config == null
+                ? source.Adapt<TDto>()             
+                : source.Adapt<TDto>(config);      
         }
 
         public static List<TDto> MapToDtos<TDto, TEntity>(this List<TEntity>? entities) { 

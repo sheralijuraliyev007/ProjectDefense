@@ -21,10 +21,17 @@ public class User : BaseEntity
 
     [MaxLength(255)]
     [Column("password_hash")]
-    public string? PasswordHash { get; set; }   
+    public string? PasswordHash { get; set; }
 
     [Column("is_verified")]
-    public bool IsVerified { get; set; }
+    public bool IsVerified { get; set; } = false;
+
+    [Column("verification_token")]
+    public Guid? VerificationToken { get; set; }
+
+    [Column("verification_token_expiry")]
+    public DateTimeOffset? VerificationTokenExpiry { get; set; }
+
 
     [Column("status_code")]
     public short StatusCode { get; set; }
