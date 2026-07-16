@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using ProjectDefense.Data.Entities.BaseEntities;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 
@@ -6,7 +7,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace ProjectDefense.Data.Entities.MainEntities
 {
     [Table("projects")]
-    public class Project
+    public class Project : BaseEntity, IHasVersion
     {
         [Key]
         [Column("id")]
@@ -37,7 +38,9 @@ namespace ProjectDefense.Data.Entities.MainEntities
 
         [Required]
         [Column("version")]
-        public int Version { get; set; } 
+        public int Version { get; set; } = 1;
+
+        public virtual List<ProjectTag> ProjectTags { get; set; } = [];
 
     }
 }

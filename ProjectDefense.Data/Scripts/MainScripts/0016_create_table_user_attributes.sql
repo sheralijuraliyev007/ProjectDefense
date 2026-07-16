@@ -11,13 +11,13 @@ create table user_attributes(
     value_option_id     int references attribute_options(id),
     value_content_id    bigint references contents(id),   
     version             int not null default 1,
-    updated_at          timestamp not null default now(),
     
 
     created_user_id     uuid references users(id),
     created_date_time   timestamptz not null default now(),
-	modified_user_id    uuid null,
-    modified_date_time  timestamptz null
+	modified_user_id    uuid null references users(id) on delete set null,
+    modified_date_time  timestamptz null,
+    unique(user_id, attribute_id)
 );
 create index ix_user_attributes_numeric on user_attributes(attribute_id, value_numeric) where value_numeric is not null;
 create index ix_user_attributes_boolean on user_attributes(attribute_id, value_boolean) where value_boolean is not null;

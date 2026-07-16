@@ -1,11 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using ProjectDefense.Data.Entities.BaseEntities;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 
 namespace ProjectDefense.Data.Entities.MainEntities
 {
     [Table("cv_attributes")]
-    public class CVAttribute
+    public class CVAttribute : BaseEntity
     {
         [Key]
         [Column("id")]

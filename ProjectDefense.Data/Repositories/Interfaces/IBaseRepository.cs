@@ -13,7 +13,7 @@ namespace ProjectDefense.Data.Repositories.Interfaces
 
         Task Update(T entity);
 
-        Task Delete(T entity);
+        void Delete(T entity);
 
         void AddRange(List<T> entities);
         void UpdateRange(List<T> entities);

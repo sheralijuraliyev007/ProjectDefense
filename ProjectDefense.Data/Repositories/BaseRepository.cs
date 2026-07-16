@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using ProjectDefense.Data.Context;
+using ProjectDefense.Data.Entities.BaseEntities;
 using ProjectDefense.Data.Repositories.Interfaces;
 
 using System.Linq.Expressions;
@@ -7,17 +8,13 @@ using System.Linq.Expressions;
 namespace ProjectDefense.Data.Repositories
 {
     public class BaseRepository<T>(AppDbContext context) :
-        IBaseRepository<T> where T : class
+        IBaseRepository<T> where T : BaseEntity
     {
         public async Task Add(T entity)
         {
-            var createdDataProperty = typeof(T).GetProperty("CreatedDateTime");
+            if (entity is BaseEntity baseEntity)
+                baseEntity.CreatedDateTime = DateTimeOffset.UtcNow;
 
-            if(createdDataProperty != null && createdDataProperty.PropertyType == typeof(DateTime) && createdDataProperty.CanWrite)
-            {
-                createdDataProperty.SetValue(entity, DateTime.UtcNow);
-
-            }
             await context.Set<T>().AddAsync(entity);
         }
 
@@ -26,9 +23,10 @@ namespace ProjectDefense.Data.Repositories
             context.Set<T>().AddRange(entities);
         }
 
-        public async Task Delete(T entity)
+        public void Delete(T entity)
         {
             context.Set<T>().Remove(entity);
+
         }
         
 
@@ -58,11 +56,11 @@ namespace ProjectDefense.Data.Repositories
 
         public async Task Update(T entity)
         {
-            var modifiedDateProperty = typeof(T).GetProperty("ModifiedDateTime");
-            if(modifiedDateProperty != null && modifiedDateProperty.PropertyType == typeof(DateTime) && modifiedDateProperty.CanWrite)
-            {
-                modifiedDateProperty.SetValue(entity, DateTime.UtcNow);
-            }
+        //    if (entity is IHasCommonAttributes audit)
+        //        audit.ModifiedDateTime = DateTimeOffset.UtcNow;
+
+            entity.ModifiedDateTime = DateTimeOffset.UtcNow;
+
             context.Set<T>().Update(entity);
         }
 

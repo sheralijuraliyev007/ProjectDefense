@@ -1,11 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using ProjectDefense.Data.Entities.BaseEntities;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 
 namespace ProjectDefense.Data.Entities.MainEntities
 {
     [Table("user_likes")]
-    public class UserLike
+    public class UserLike : BaseEntity
     {
         [Required]
         [Column("user_id")]

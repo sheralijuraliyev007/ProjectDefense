@@ -1,10 +1,9 @@
-﻿using ProjectDefense.Data.Entities.InfoEntities;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ProjectDefense.Data.Entities.BaseEntities
 {
-    public class BaseInfoEntity : BaseEntity, IHasCommonAttributes
+    public class BaseInfoEntity : BaseEntity
     {
         [Key]
         [Column("id")]

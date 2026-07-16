@@ -5,12 +5,12 @@ create table info.info_attribute_type(
 
     created_user_id     uuid references users(id),
     created_date_time   timestamptz not null default now(),
-	modified_user_id    uuid null,
+	modified_user_id    uuid null references users(id) on delete set null,
     modified_date_time  timestamptz null
 );
 
 
-create index idx_attribute_type_code on info.info_attribute_type(code);
+
 
 insert into info.info_table(code, name)
 values(2,'info_attribute_type')

@@ -1,6 +1,7 @@
 ﻿using Mapster;
+using Microsoft.EntityFrameworkCore;
 using ProjectDefense.Common.Extensions;
-using ProjectDefense.Data.Entities.InfoEntities;
+using ProjectDefense.Data.Entities.BaseEntities;
 using ProjectDefense.Data.Repositories.Interfaces;
 using ProjectDefense.Service.Admin.Base.Interfaces;
 using ProjectDefense.Service.Common.Interfaces;
@@ -9,7 +10,7 @@ using StatusGeneric;
 namespace ProjectDefense.Service.Admin.Base
 {
     public class BaseInfoService<TEntity> : StatusGenericHandler, IBaseInfoService<TEntity>
-        where TEntity : class, IHasCommonAttributes
+        where TEntity : BaseEntity
     {
         protected readonly IBaseRepository<TEntity> _baseRepository;
         protected readonly IUserHelper _userHelper;
@@ -22,36 +23,48 @@ namespace ProjectDefense.Service.Admin.Base
 
         public async Task<string> Create<TModel>(TModel model)
         {
-            var (isExists, userId) = UserExists();
-            if (!isExists)
-            {
-                return "Failed";
-            }
+            var (userExists, userId) = UserExists();
+            if (!userExists) return string.Empty;
+
             var entity = model.MapToEntity<TEntity, TModel>();
             entity.CreatedUserId = userId;
-            await _baseRepository.Add(entity);
-            await _baseRepository.SaveChanges();
 
-            return "Added";
+            try
+            {
+                await _baseRepository.Add(entity);
+                await _baseRepository.SaveChanges();
+                return "Added";
+            }
+            catch (DbUpdateException ex)
+            {
+                AddError(ex.ToString());
+                return string.Empty;
+            }
         }
 
         public async Task<string> DeleteById<TId>(TId id)
         {
-            var (exists, entity) =await EntityExist(id);
-            if (!exists) {
-                return "Entity not found";      
-            }
-            await _baseRepository.Delete(entity!);
-            await _baseRepository.SaveChanges();
+            var (exists, entity) = await EntityExist(id);
+            if (!exists) return string.Empty;
 
-            return "Deleted";
+            try
+            {
+                _baseRepository.Delete(entity!);
+                await _baseRepository.SaveChanges();
+                return "Deleted";
+            }
+            catch (DbUpdateException ex)
+            {
+                AddError(ex.ToString());
+                return string.Empty;
+            }
         }
 
         public async Task<List<TDto>> GetAll<TDto>()
         {
-            var entites = _baseRepository.GetAll().ToList();
-            return entites.MapToDtos<TDto, TEntity>();
+            var entities = _baseRepository.GetAll().ToList();
 
+            return entities.MapToDtos<TEntity, TDto>();
         }
 
         public async Task<TDto?> GetById<TDto, TId>(TId id)
@@ -59,37 +72,42 @@ namespace ProjectDefense.Service.Admin.Base
             var (exists, entity) = await EntityExist(id);
             if (!exists) return default(TDto);
 
-            return entity!.MapToDto<TDto, TEntity>();
-            
+            return entity!.MapToDto<TEntity, TDto>();
         }
 
-        public async Task<string?> Update<TId, TModel>(TId id, TModel model)
+        public async Task<string> Update<TId, TModel>(TId id, TModel model)
         {
-            var(exists, entity) = await EntityExist(id);
-            if (!exists) return null;
+            var (exists, entity) = await EntityExist(id);
+            if (!exists) return string.Empty;
 
-            var (existUser, userId) = UserExists();
-            if (!existUser) return null;
+            var (userExists, userId) = UserExists();
+            if (!userExists) return string.Empty;
 
             model.Adapt(entity);
             entity!.ModifiedUserId = userId;
-            entity!.ModifiedDateTime = DateTimeOffset.UtcNow;
-            await _baseRepository.Update(entity!);
-            await _baseRepository.SaveChanges();
-            return "Updated";
-                
-        }
 
+            try
+            {
+                await _baseRepository.Update(entity);
+                await _baseRepository.SaveChanges();
+                return "Updated";
+            }
+            catch (DbUpdateException)
+            {
+                AddError("Entity with this name or code already exists.");
+                return string.Empty;
+            }
+        }
 
         private (bool, Guid?) UserExists()
         {
             var userId = _userHelper.GetUserId();
-            if (userId == null) {
-                AddError("User is not authenticated");
-                return new(false, null);
+            if (userId == null)
+            {
+                AddError("User is not authenticated.");
+                return (false, null);
             }
-
-            return new(true, userId);
+            return (true, userId);
         }
 
         private async Task<(bool, TEntity?)> EntityExist<TId>(TId id)
@@ -97,7 +115,7 @@ namespace ProjectDefense.Service.Admin.Base
             var entity = await _baseRepository.GetById(id);
             if (entity == null)
             {
-                AddError("Entity does not exist");
+                AddError("Entity does not exist.");
                 return (false, null);
             }
             return (true, entity);

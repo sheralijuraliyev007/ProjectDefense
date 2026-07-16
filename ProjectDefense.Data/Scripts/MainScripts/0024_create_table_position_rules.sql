@@ -11,7 +11,7 @@ create table position_rules(
 
     created_user_id     uuid references users(id),
     created_date_time   timestamptz not null default now(),
-	modified_user_id    uuid null,
+	modified_user_id    uuid null references users(id) on delete set null,
     modified_date_time  timestamptz null,
 
     constraint fk_access_rules_option
@@ -19,5 +19,5 @@ create table position_rules(
         references attribute_options(id, attribute_id)
 );
 
-create index ix_access_rules_position on position_access_rules(position_id);
-create index ix_access_rules_attribute on position_access_rules(attribute_id);
+create index ix_access_rules_position on position_rules(position_id);
+create index ix_access_rules_attribute on position_rules(attribute_id);

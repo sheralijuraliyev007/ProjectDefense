@@ -35,7 +35,7 @@ namespace ProjectDefense.Data.Entities.MainEntities
         public short CategoryCode { get; set; }
 
         [ForeignKey(nameof(CategoryCode))]
-        public virtual AttributeType? CategoryType { get; set; }
+        public virtual AttributeCategory? CategoryType { get; set; }
 
         [Required]
         [Column("is_removable")]

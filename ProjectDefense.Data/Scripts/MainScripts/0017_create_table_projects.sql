@@ -9,8 +9,8 @@ create table projects(
 
     created_user_id     uuid references users(id),
     created_date_time   timestamptz not null default now(),
-	modified_user_id    uuid null,
-    modified_date_time  timestamptz null
+	modified_user_id    uuid null references users(id) on delete set null,
+    modified_date_time  timestamptz null,
     constraint chk_projects_period check (period_end is null or period_start is null or period_end >= period_start)
     
 );

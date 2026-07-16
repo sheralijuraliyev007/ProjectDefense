@@ -40,6 +40,6 @@ namespace ProjectDefense.Data.Entities.MainEntities
 
         [Required]
         [Column("version")]
-        public int Version { get; set; }  
+        public int Version { get; set; } = 1;
     }
 }

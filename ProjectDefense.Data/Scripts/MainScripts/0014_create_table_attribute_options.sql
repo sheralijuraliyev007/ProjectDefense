@@ -4,11 +4,10 @@ create table attribute_options(
     label         varchar(100) not null,
     sort_order    smallint not null default 0,
     unique (attribute_id, label),
+    unique(attribute_id, id),
 
     created_user_id     uuid references users(id),
     created_date_time   timestamptz not null default now(),
-	modified_user_id    uuid null,
-    modified_date_time  timestamptz null,
-
-    constraint uq_attribute_options_attribute_id_label unique (attribute_id, label)
+	modified_user_id    uuid null references users(id) on delete set null,
+    modified_date_time  timestamptz null
 );

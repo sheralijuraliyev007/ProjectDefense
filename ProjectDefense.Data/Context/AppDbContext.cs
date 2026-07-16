@@ -42,7 +42,20 @@ namespace ProjectDefense.Data.Context
 
             modelBuilder.Entity<UserRole>()
                 .HasKey(ur => new { ur.UserId, ur.RoleCode });
+
+            modelBuilder.Entity<PositionAttribute>()
+                .HasKey(pa => new { pa.PositionId, pa.AttributeId });
+
+            modelBuilder.Entity<PositionProjectTag>()
+                .HasKey(t => new { t.PositionId, t.TagId });
+
+            modelBuilder.Entity<ProjectTag>()
+                .HasKey(t => new { t.ProjectId, t.TagId });
+
+            modelBuilder.Entity<UserLike>()
+                .HasKey(ul => new { ul.UserId, ul.CVId });
         }
+        
 
     }
 }

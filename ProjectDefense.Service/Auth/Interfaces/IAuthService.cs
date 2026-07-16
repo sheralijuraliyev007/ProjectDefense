@@ -11,5 +11,6 @@ namespace ProjectDefense.Service.Auth.Interfaces
         Task<TokenDto?> LoginAsync(LoginModel loginModel);
         Task<TokenDto?> SocialLoginAsync(SocialLoginModel model);
         Task<string> VerifyEmail(Guid verificationToken);
+        Task ResendVerificationEmailAsync(string email);
     }
 }

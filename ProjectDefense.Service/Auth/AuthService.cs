@@ -14,14 +14,20 @@ using StatusGeneric;
 
 namespace ProjectDefense.Service.Auth
 {
-    internal class AuthService(IUnitOfWork unitOfWork, IEnumerable<ISocialLoginProvider> socialLoginProviders, IJwtService jwtService)
-        : StatusGenericHandler, IAuthService
+    internal class AuthService(
+        IUnitOfWork unitOfWork,
+        IEnumerable<ISocialLoginProvider> socialLoginProviders,
+        IJwtService jwtService,
+        IEmailService emailService) : StatusGenericHandler, IAuthService
     {
+        // ---------- Register ----------
+
         public async Task<UserDto?> RegisterAsync(RegisterModel registerModel)
         {
             if (await EmailTaken(registerModel.Email)) return null;
             var user = await CreateUser(registerModel);
-            return user?.MapToDto<User, UserDto>(_config);
+            await emailService.SendVerificationEmailAsync(user.Email, user.VerificationToken!.Value);
+            return user.MapToDto<User, UserDto>(_config);
         }
 
         private async Task<bool> EmailTaken(string email)
@@ -31,7 +37,7 @@ namespace ProjectDefense.Service.Auth
             return existing is not null;
         }
 
-        private async Task<User?> CreateUser(RegisterModel model)
+        private async Task<User> CreateUser(RegisterModel model)
         {
             var user = new User { Email = model.Email, StatusCode = UserStatusConstants.ActiveStatusCode };
             user.PasswordHash = new PasswordHasher<User>().HashPassword(user, model.Password);
@@ -41,10 +47,17 @@ namespace ProjectDefense.Service.Auth
 
         private async Task SaveNewUser(User user)
         {
+            if (!user.IsVerified) IssueVerificationToken(user);
             await unitOfWork.UserRepository().Add(user);
             await unitOfWork.SaveChanges();
             await AttachStatus(user);
             await AttachRole(user, RoleConstants.CandidateCode);
+        }
+
+        private static void IssueVerificationToken(User user)
+        {
+            user.VerificationToken = Guid.NewGuid();
+            user.VerificationTokenExpiry = DateTimeOffset.UtcNow.AddHours(24);
         }
 
         public async Task<TokenDto?> LoginAsync(LoginModel loginModel)
@@ -100,10 +113,51 @@ namespace ProjectDefense.Service.Auth
         private async Task<User> CreateSocialUser(SocialUserInfoDto info)
         {
             var user = new User { Email = info.Email, IsVerified = info.EmailVerified, StatusCode = UserStatusConstants.ActiveStatusCode };
-            await unitOfWork.UserRepository().Add(user);
-            await unitOfWork.SaveChanges();
             await SaveNewUser(user);
             return user;
+        }
+
+        public async Task<string> VerifyEmail(Guid verificationToken)
+        {
+            var user = await FindByVerificationToken(verificationToken);
+            if (user is null) return "Invalid or expired verification link.";
+            return await ConfirmVerification(user);
+        }
+
+        private async Task<User?> FindByVerificationToken(Guid token)
+        {
+            var user = await unitOfWork.UserRepository().GetAll().FirstOrDefaultAsync(u => u.VerificationToken == token);
+            return IsTokenValid(user) ? user : null;
+        }
+
+        private static bool IsTokenValid(User? user) =>
+            user is not null && user.VerificationTokenExpiry > DateTimeOffset.UtcNow;
+
+        private async Task<string> ConfirmVerification(User user)
+        {
+            user.IsVerified = true;
+            user.VerificationToken = null;
+            user.VerificationTokenExpiry = null;
+            await unitOfWork.UserRepository().Update(user);
+            await unitOfWork.SaveChanges();
+            return "Email verified successfully.";
+        }
+
+        public async Task ResendVerificationEmailAsync(string email)
+        {
+            var user = await unitOfWork.UserRepository().GetByEmail(email);
+            if (!CanResend(user)) return;
+            IssueVerificationToken(user!);
+            await unitOfWork.UserRepository().Update(user!);
+            await unitOfWork.SaveChanges();
+            await emailService.SendVerificationEmailAsync(user!.Email, user.VerificationToken!.Value);
+        }
+
+        private bool CanResend(User? user)
+        {
+            if (user is null) { AddError("No account found for that email."); return false; }
+            if (user.IsVerified) { AddError("This account is already verified."); return false; }
+            return true;
         }
 
         private async Task AttachStatus(User user)
@@ -119,11 +173,6 @@ namespace ProjectDefense.Service.Auth
             await unitOfWork.UserRoleRepository().Add(userRole);
             await unitOfWork.SaveChanges();
             user.UserRoles.Add(userRole);
-        }
-
-        public Task<string> VerifyEmail(Guid verificationToken)
-        {
-            throw new NotImplementedException(); // needs a token strategy decision — see note below
         }
 
         private static readonly TypeAdapterConfig _config = BuildMapConfig();

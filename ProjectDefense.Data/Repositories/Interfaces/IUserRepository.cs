@@ -1,4 +1,6 @@
-﻿namespace ProjectDefense.Data.Repositories.Interfaces
+﻿using ProjectDefense.Data.Entities.MainEntities;
+
+namespace ProjectDefense.Data.Repositories.Interfaces
 {
     public interface IUserRepository : IBaseRepository<User>
     {
