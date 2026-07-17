@@ -10,7 +10,7 @@ namespace ProjectDefense.Service.Main.Interfaces
     public interface IPositionService : IMainServiceBase<PositionFilterOptions, PositionDto, PositionCreateModel, PositionUpdateModel>
     {
         Task<IStatusGeneric> SetAttributesAsync(int positionId, List<int> attributeIds);
-        Task<IStatusGeneric> SetProjectTags(int positionId, List<string> tagLabels);
+        Task<IStatusGeneric> SetProjectTagsAsync(int positionId, List<string> tagLabels);
 
         Task<int?> DuplicateAsync(int positionId);
     }

@@ -45,7 +45,7 @@ namespace ProjectDefense.Service.Main
         protected override async Task<bool> CanModify(Data.Entities.MainEntities.Attribute entity, Guid userId) =>
             await _userRoleRepository.GetAll()
             .AnyAsync(ur => ur.UserId == userId &&
-                    (ur.RoleCode == RoleConstants.Recruiter ||  ur.RoleCode ==  RoleConstants.Administrator));
+                      ur.RoleCode ==  RoleConstants.Administrator);
 
         protected override IQueryable<Data.Entities.MainEntities.Attribute> GetAllQuery() =>
             _repository.GetAll(a => a.DType!, a => a.CategoryType!);
@@ -68,6 +68,8 @@ namespace ProjectDefense.Service.Main
 
             if (createModel.DtypeCode == AttributeDtypeConstants.OneOfMany && createModel.Options.Count > 0)
                 await SaveOptions(Convert.ToInt32(id), createModel.Options);
+
+            return id;
 
         }
 

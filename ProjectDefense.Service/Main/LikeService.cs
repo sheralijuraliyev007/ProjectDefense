@@ -29,7 +29,7 @@ namespace ProjectDefense.Service.Main
                 return this;
             }
             var existing = await likeRepo.GetAll().
-                FirstOrDefaultAsync(ul=>ul.CVId == cvId && userId == userId.Value);
+                FirstOrDefaultAsync(ul=>ul.CVId == cvId && ul.UserId == userId.Value);
 
             if (existing != null) likeRepo.Delete(existing);
             else await likeRepo.Add(new UserLike {UserId = userId.Value, CVId = cvId , CreatedUserId = userId});
