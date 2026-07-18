@@ -16,45 +16,42 @@ namespace ProjectDefense.Service.Main
 
         public async Task<IStatusGeneric> AddAttributeAsync(int attributeId, Guid? targetUserId = null)
         {
-            var (exists, userId) = await UserExist();
-            if(!exists)
+            var (exists, callerId) = await UserExist();
+            if (!exists)
             {
                 AddError("You are not logged in");
                 return this;
             }
 
-            var (attributeExist, attribute) = await AttributeExist(attributeId);
-            if(!attributeExist)
+            var (attributeExist, _) = await AttributeExist(attributeId);
+            if (!attributeExist)
             {
-                AddError("Attribute doesn;t exist");
+                AddError("Attribute doesn't exist");
                 return this;
             }
 
-
-            var ownerId = targetUserId ?? userId!.Value;
-            if (ownerId != userId && !await IsAdministrator(userId!.Value))
+            var ownerId = targetUserId ?? callerId!.Value;
+            if (ownerId != callerId && !await IsAdministrator(callerId!.Value))
             {
-                AddError("You can't add to here");
+                AddError("You're not allowed to edit this profile.");
                 return this;
             }
 
-
-            if (await unitOfWork.UserAttributeRepository().GetAll().AnyAsync(ua => ua.UserId == userId && ua.AttributeId == attributeId))
+            if (await unitOfWork.UserAttributeRepository().GetAll()
+                    .AnyAsync(ua => ua.UserId == ownerId && ua.AttributeId == attributeId))
             {
-                AddError("There is already this attibute in your profile");
+                AddError("This attribute is already on this profile.");
                 return this;
             }
 
             await unitOfWork.UserAttributeRepository().Add(new UserAttribute
             {
-                UserId = userId!.Value,
+                UserId = ownerId,
                 AttributeId = attributeId,
-                CreatedUserId = userId
-
+                CreatedUserId = callerId
             });
             await unitOfWork.UserAttributeRepository().SaveChanges();
             return this;
-
         }
 
         public async Task<List<UserAttributeDto>> GetMyAttributesAsync()

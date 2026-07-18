@@ -9,7 +9,10 @@ namespace ProjectDefense.Data.Repositories
     {
         public async Task<User?> GetByEmail(string email)
         {
-            return await context.Set<User>().FirstOrDefaultAsync(x => x.Email == email);
+            return await context.Set<User>()
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Email == email);
         }
     }
 }

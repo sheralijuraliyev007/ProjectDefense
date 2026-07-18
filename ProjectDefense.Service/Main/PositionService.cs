@@ -3,6 +3,7 @@ using ProjectDefense.Common.Constants;
 using ProjectDefense.Common.DTOs.Main;
 using ProjectDefense.Common.FilterOptions;
 using ProjectDefense.Common.Models.Main.Position;
+using ProjectDefense.Common.Models.Shared;
 using ProjectDefense.Data.Entities.MainEntities;
 using ProjectDefense.Data.Repositories.Interfaces;
 using ProjectDefense.Service.Common.Interfaces;
@@ -13,27 +14,14 @@ using StatusGeneric;
 
 namespace ProjectDefense.Service.Main
 {
-    public class PositionService : BaseMainService<Position, PositionFilterOptions, PositionDto, PositionCreateModel, PositionUpdateModel>, IPositionService
+    public class PositionService(
+    IBaseRepository<Position> repository,
+    IUnitOfWork unitOfWork,
+    IUserHelper userHelper,
+    ITagService tagService,
+    IPositionAccessService positionAccessService)
+    : BaseMainService<Position, PositionFilterOptions, PositionDto, PositionCreateModel, PositionUpdateModel>(repository, userHelper), IPositionService
     {
-        private readonly IBaseRepository<PositionAttribute> _positionAttributeRepository;
-        private readonly IBaseRepository<PositionProjectTag> _positionProjectTagRepository;
-        private readonly IBaseRepository<UserRole> _userRoleRepository;
-        private readonly ITagService _tagService;
-
-        public PositionService(
-            IBaseRepository<Position> repository,
-            IBaseRepository<PositionAttribute> positionAttributeRepository,
-            IBaseRepository<PositionProjectTag> positionProjectTagRepository,
-            IBaseRepository<UserRole> userRoleRepository,
-            ITagService tagService,
-            IUserHelper userHelper)
-            : base(repository, userHelper)
-        {
-            _positionAttributeRepository = positionAttributeRepository;
-            _positionProjectTagRepository = positionProjectTagRepository;
-            _userRoleRepository = userRoleRepository;
-            _tagService = tagService;
-        }
 
         protected override IQueryable<Position> GetAllQuery() =>
             _repository.GetAll(p => p.Status!);
@@ -50,13 +38,12 @@ namespace ProjectDefense.Service.Main
             StatusCode = CommonStatusConstants.ActiveStatusCode
         };
 
-        // no ownership — any Recruiter/Administrator manages any position, per spec
         protected override async Task<bool> CanModify(Position entity, Guid userId) =>
-            await _userRoleRepository.GetAll()
+            await unitOfWork.UserRoleRepository().GetAll()
                 .AnyAsync(ur => ur.UserId == userId
                     && (ur.RoleCode == RoleConstants.Recruiter || ur.RoleCode == RoleConstants.Administrator));
 
-        public override async Task<TId?> AddAsync<TId>(PositionCreateModel createModel)
+        public override async Task<TId?> AddAsync<TId>(PositionCreateModel createModel) where TId: struct
         {
             var id = await base.AddAsync<TId>(createModel);
             if (id == null) return id;
@@ -107,7 +94,7 @@ namespace ProjectDefense.Service.Main
             await _repository.Add(copy);
             await _repository.SaveChanges();
 
-            var sourceAttributeIds = await _positionAttributeRepository.GetAll()
+            var sourceAttributeIds = await unitOfWork.PositionAttributeRepository().GetAll()
                 .Where(pa => pa.PositionId == positionId)
                 .Select(pa => pa.AttributeId)
                 .ToListAsync();
@@ -115,6 +102,34 @@ namespace ProjectDefense.Service.Main
             await ReplaceAttributeLinks(copy.Id, sourceAttributeIds);
             return copy.Id;
         }
+
+        public override async Task<PaginationModel<PositionDto>> GetAllAsync(PositionFilterOptions filterOptions)
+        {
+            var page = await base.GetAllAsync(filterOptions);
+
+            var userId = _userHelper.GetUserId();
+            if (userId == null || await IsRecruiterOrAdmin(userId.Value))
+                return page; 
+
+            var visibleRows = new List<PositionDto>();
+            foreach (var row in page.Rows)
+            {
+                if (await positionAccessService.CanAccessAsync(row.Id, userId.Value))
+                    visibleRows.Add(row);
+            }
+
+            return new PaginationModel<PositionDto>
+            {
+                Rows = visibleRows,
+                PageIndex = page.PageIndex,
+                PageSize = page.PageSize,
+                Total = page.Total 
+            };
+        }
+
+        private Task<bool> IsRecruiterOrAdmin(Guid userId) =>
+            unitOfWork.UserRoleRepository().GetAll()
+                .AnyAsync(ur => ur.UserId == userId && (ur.RoleCode == RoleConstants.Recruiter || ur.RoleCode == RoleConstants.Administrator));
 
 
         private async Task<bool> EnsureCanManage(int positionId)
@@ -134,33 +149,33 @@ namespace ProjectDefense.Service.Main
 
         private async Task ReplaceAttributeLinks(int positionId, List<int> attributeIds)
         {
-            var oldLinks = await _positionAttributeRepository.GetAll()
-                .Where(pa => pa.PositionId == positionId)
-                .ToListAsync();
-            _positionAttributeRepository.DeleteRange(oldLinks);
+            var repo = unitOfWork.PositionAttributeRepository();
+
+            var oldLinks = await repo.GetAll().Where(pa => pa.PositionId == positionId).ToListAsync();
+            repo.DeleteRange(oldLinks);
 
             var newLinks = attributeIds.Distinct()
                 .Select(attrId => new PositionAttribute { PositionId = positionId, AttributeId = attrId })
                 .ToList();
-            _positionAttributeRepository.AddRange(newLinks);
+            repo.AddRange(newLinks);
 
-            await _positionAttributeRepository.SaveChanges();
+            await repo.SaveChanges();
         }
 
 
 
         private async Task ReplaceProjectTagLinks(int positionId, List<string> tagLabels)
         {
-            var oldLinks = await _positionProjectTagRepository.GetAll()
+            var oldLinks = await unitOfWork.PositionProjectTagRepository().GetAll()
                 .Where(t => t.PositionId == positionId)
                 .ToListAsync();
-            _positionProjectTagRepository.DeleteRange(oldLinks);
+            unitOfWork.PositionProjectTagRepository().DeleteRange(oldLinks);
 
-            var tags = await _tagService.GetOrCreateTagsAsync(tagLabels);
+            var tags = await tagService.GetOrCreateTagsAsync(tagLabels);
             var newLinks = tags.Select(t => new PositionProjectTag { PositionId = positionId, TagId = t.Id }).ToList();
-            _positionProjectTagRepository.AddRange(newLinks);
+            unitOfWork.PositionProjectTagRepository().AddRange(newLinks);
 
-            await _positionProjectTagRepository.SaveChanges();
+            await unitOfWork.PositionProjectTagRepository().SaveChanges();
         }
     }
 }

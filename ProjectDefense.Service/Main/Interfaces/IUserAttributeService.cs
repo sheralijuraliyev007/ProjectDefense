@@ -1,6 +1,5 @@
 ﻿using ProjectDefense.Common.DTOs.Main;
 using ProjectDefense.Common.Models.Main.UserAttribute;
-using ProjectDefense.Data.Entities.MainEntities;
 using StatusGeneric;
 
 namespace ProjectDefense.Service.Main.Interfaces

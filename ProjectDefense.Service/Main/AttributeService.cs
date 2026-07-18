@@ -6,14 +6,15 @@ using ProjectDefense.Common.FilterOptions;
 using ProjectDefense.Common.Models.Main.Attribute;
 using ProjectDefense.Data.Entities.MainEntities;
 using ProjectDefense.Data.Repositories.Interfaces;
-using ProjectDefense.Service.Attributes;
+
 using ProjectDefense.Service.Common.Interfaces;
 using ProjectDefense.Service.Main.Base;
+using ProjectDefense.Service.Main.Interfaces;
 using ProjectDefense.Service.Main.QueryObjects;
 
 namespace ProjectDefense.Service.Main
 {
-    public class AttributeService : BaseMainService<Data.Entities.MainEntities.Attribute, AttributeFilterOptions, AttributeDto, AttributeCreateModel, AttributeUpdateModel>, IAttributeService
+    public class AttributeService : BaseMainService<Data.Entities.MainEntities.Attribute, AttributeFilterOptions, AttributeDto, AttributeCreateModel, AttributeUpdateModel> , IAttributeService
     {
         private readonly IBaseRepository<UserRole> _userRoleRepository;
 
@@ -44,8 +45,8 @@ namespace ProjectDefense.Service.Main
 
         protected override async Task<bool> CanModify(Data.Entities.MainEntities.Attribute entity, Guid userId) =>
             await _userRoleRepository.GetAll()
-            .AnyAsync(ur => ur.UserId == userId &&
-                      ur.RoleCode ==  RoleConstants.Administrator);
+            .AnyAsync(ur => ur.UserId == userId
+            && (ur.RoleCode == RoleConstants.Recruiter || ur.RoleCode == RoleConstants.Administrator));
 
         protected override IQueryable<Data.Entities.MainEntities.Attribute> GetAllQuery() =>
             _repository.GetAll(a => a.DType!, a => a.CategoryType!);
@@ -60,7 +61,7 @@ namespace ProjectDefense.Service.Main
             return attributes.MapToDtos<Data.Entities.MainEntities.Attribute, AttributeDto>();
         }
 
-        public override async Task<TId?> AddAsync<TId>(AttributeCreateModel createModel)
+        public override async Task<TId?> AddAsync<TId>(AttributeCreateModel createModel) where TId  : struct
         {
             var id = await base.AddAsync<TId>(createModel);
 

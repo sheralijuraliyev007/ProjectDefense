@@ -10,5 +10,7 @@ namespace ProjectDefense.Service.Main.Interfaces
     public interface ICvService : IMainServiceBase<CVFilterOptions, CvDto, CvCreateModel, CvUpdateModel>
     {
         Task<IStatusGeneric> PublishAsync(long cvId);
+
+        Task<List<UserAttributeDto>> GetCvAttributesAsync(long cvId);
     }
 }

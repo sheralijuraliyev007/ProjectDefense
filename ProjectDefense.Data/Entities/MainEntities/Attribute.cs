@@ -6,7 +6,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace ProjectDefense.Data.Entities.MainEntities
 {
     [Table("attributes")]
-    public class Attribute : BaseEntity
+    public class Attribute : BaseEntity, IHasVersion
     {
         [Key]
         [Column("id")]

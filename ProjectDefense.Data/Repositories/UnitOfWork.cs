@@ -31,7 +31,9 @@ namespace ProjectDefense.Data.Repositories
         IUserRepository userRepository,
         IBaseRepository<UserAttribute> userAttributeRepository,
         IBaseRepository<UserLike> userLikeRepository,
-        IBaseRepository<UserRole> userRoleRepository)
+        IBaseRepository<UserRole> userRoleRepository,
+        IBaseRepository<PositionRule> positionRuleRepository,
+        IBaseRepository<DiscussionMessage> discussionMessageRepository)
         : IUnitOfWork
     {
         public IBaseRepository<AttributeCategory> AttributeCategoryRepository() =>
@@ -102,10 +104,15 @@ namespace ProjectDefense.Data.Repositories
 
         public IBaseRepository<UserStatus> UserStatusRepository() =>
             userStatusRepository ?? new BaseRepository<UserStatus>(context);
+        public IBaseRepository<DiscussionMessage> DiscussionMessageRepository() =>
+            discussionMessageRepository ?? new BaseRepository<DiscussionMessage>(context);
 
         public async Task SaveChanges() => await context.SaveChangesAsync();
 
         public IDbContextTransaction BeginTransaction() => context.Database.BeginTransaction();
         public IDbContextTransaction? CurrentTransaction() => context.Database.CurrentTransaction;
+
+        public IBaseRepository<PositionRule> PositionRuleRepository() =>
+            positionRuleRepository ?? new BaseRepository<PositionRule>(context);
     }
 }

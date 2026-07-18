@@ -7,11 +7,7 @@ namespace ProjectDefense.Data.Context
 {
     public class AppDbContext : DbContext
     {
-        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
-        {
-           
-        }
-
+        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options){ }
         public DbSet<AttributeCategory> AttributeCategories { get; set; }
         public DbSet<AttributeType> AttributeTypes { get; set; }
         public DbSet<CommonStatus> CommonStatuses { get; set; }
@@ -35,6 +31,8 @@ namespace ProjectDefense.Data.Context
         public DbSet<UserAttribute> UserAttributes{ get; set; }
         public DbSet<UserLike> UserLikes{ get; set; }
         public DbSet<UserRole> UserRoles{ get; set; }
+        public DbSet<PositionRule> PositionRules{ get; set; }
+        public DbSet<DiscussionMessage> DiscussionMessages{ get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

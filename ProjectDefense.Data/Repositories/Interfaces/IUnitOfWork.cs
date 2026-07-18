@@ -1,5 +1,4 @@
-﻿
-using Microsoft.EntityFrameworkCore.Storage;
+﻿using Microsoft.EntityFrameworkCore.Storage;
 using ProjectDefense.Data.Entities.InfoEntities;
 using ProjectDefense.Data.Entities.MainEntities;
 
@@ -30,9 +29,10 @@ namespace ProjectDefense.Data.Repositories.Interfaces
         IBaseRepository<UserAttribute> UserAttributeRepository();
         IBaseRepository<UserLike> UserLikeRepository();
         IBaseRepository<UserRole> UserRoleRepository();
+        IBaseRepository<DiscussionMessage> DiscussionMessageRepository();
 
+        IBaseRepository<PositionRule> PositionRuleRepository();
         Task SaveChanges();
-
         IDbContextTransaction BeginTransaction();
         IDbContextTransaction? CurrentTransaction();
     }

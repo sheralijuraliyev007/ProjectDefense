@@ -13,25 +13,9 @@ using StatusGeneric;
 
 namespace ProjectDefense.Service.Main
 {
-    public class ProjectService : BaseMainService<Project, ProjectFilterOptions, ProjectDto, ProjectCreateModel, ProjectUpdateModel>, IProjectService
+    public class ProjectService(IBaseRepository<Project> repository, IUserHelper userHelper, IUnitOfWork unitOfWork, ITagService tagService) : 
+        BaseMainService<Project, ProjectFilterOptions, ProjectDto, ProjectCreateModel, ProjectUpdateModel>(repository,userHelper), IProjectService
     {
-        private readonly IBaseRepository<ProjectTag> _projectTagRepository;
-        private readonly IBaseRepository<UserRole> _userRoleRepository;
-        private readonly ITagService _tagService;
-
-        public ProjectService(
-            IBaseRepository<Project> repository,
-            IBaseRepository<ProjectTag> projectTagRepository,
-            IBaseRepository<UserRole> userRoleRepository,
-            ITagService tagService,
-            IUserHelper userHelper)
-            : base(repository, userHelper)
-        {
-            _projectTagRepository = projectTagRepository;
-            _userRoleRepository = userRoleRepository;
-            _tagService = tagService;
-        }
-
         protected override IQueryable<Project> GetAllQuery() =>
             _repository.GetAll(p => p.ProjectTags);
 
@@ -50,7 +34,7 @@ namespace ProjectDefense.Service.Main
         protected override async Task<bool> CanModify(Project entity, Guid userId)
         {
             if (entity.UserId == userId) return true;
-            return await _userRoleRepository.GetAll()
+            return await unitOfWork.UserRoleRepository().GetAll()
                 .AnyAsync(ur => ur.UserId == userId && ur.RoleCode == RoleConstants.Administrator);
         }
 
@@ -72,14 +56,14 @@ namespace ProjectDefense.Service.Main
 
         private async Task ReplaceTagLinks(int projectId, List<string> tagLabels)
         {
-            var oldLinks = await _projectTagRepository.GetAll()
+            var oldLinks = await unitOfWork.ProjectTagRepository().GetAll()
                 .Where(pt => pt.ProjectId == projectId)
                 .ToListAsync();
-            _projectTagRepository.DeleteRange(oldLinks);
+            unitOfWork.ProjectTagRepository().DeleteRange(oldLinks);
 
-            var tags = await _tagService.GetOrCreateTagsAsync(tagLabels);
+            var tags = await tagService.GetOrCreateTagsAsync(tagLabels);
             var newLinks = tags.Select(t => new ProjectTag { ProjectId = projectId, TagId = t.Id }).ToList();
-            _projectTagRepository.AddRange(newLinks);
+            unitOfWork.ProjectTagRepository().AddRange(newLinks);
 
             await _repository.SaveChanges();
         }

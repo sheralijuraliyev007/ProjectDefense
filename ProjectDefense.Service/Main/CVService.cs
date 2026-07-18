@@ -13,25 +13,13 @@ using StatusGeneric;
 
 namespace ProjectDefense.Service.Main
 {
-    public class CvService : BaseMainService<CV, CVFilterOptions, CvDto, CvCreateModel, CvUpdateModel>, ICvService
+    public class CvService(
+        IBaseRepository<CV> repository,
+        IUnitOfWork unitOfWork,
+        IUserHelper userHelper,
+        IPositionAccessService positionAccessService)
+        : BaseMainService<CV, CVFilterOptions, CvDto, CvCreateModel, CvUpdateModel>(repository, userHelper), ICvService
     {
-        private readonly IBaseRepository<PositionAttribute> _positionAttributeRepository;
-        private readonly IBaseRepository<UserAttribute> _userAttributeRepository;
-        private readonly IBaseRepository<UserRole> _userRoleRepository;
-
-        public CvService(
-            IBaseRepository<CV> repository,
-            IBaseRepository<PositionAttribute> positionAttributeRepository,
-            IBaseRepository<UserAttribute> userAttributeRepository,
-            IBaseRepository<UserRole> userRoleRepository,
-            IUserHelper userHelper)
-            : base(repository, userHelper)
-        {
-            _positionAttributeRepository = positionAttributeRepository;
-            _userAttributeRepository = userAttributeRepository;
-            _userRoleRepository = userRoleRepository;
-        }
-
         protected override IQueryable<CV> GetAllQuery() =>
             _repository.GetAll(cv => cv.Position!, cv => cv.Status!);
 
@@ -47,21 +35,29 @@ namespace ProjectDefense.Service.Main
 
         protected override async Task<bool> CanModify(CV entity, Guid userId)
         {
-            if (entity.UserId == userId)
-                return true;
-
-            return await _userRoleRepository.GetAll()
+            if (entity.UserId == userId) return true;
+            return await unitOfWork.UserRoleRepository().GetAll()
                 .AnyAsync(ur => ur.UserId == userId && ur.RoleCode == RoleConstants.Administrator);
+        }
+
+        public override async Task<TId?> AddAsync<TId>(CvCreateModel createModel)
+        {
+            var userId = _userHelper.GetUserId();
+            if (userId == null) { AddError("You need to be logged in to do that."); return default; }
+
+            if (!await positionAccessService.CanAccessAsync(createModel.PositionId, userId.Value))
+            {
+                AddError("You don't meet the requirements for this position.");
+                return default;
+            }
+
+            return await base.AddAsync<TId>(createModel);
         }
 
         public async Task<IStatusGeneric> PublishAsync(long cvId)
         {
             var cv = await _repository.GetById(cvId);
-            if (cv == null)
-            {
-                AddError("CV not found.");
-                return this;
-            }
+            if (cv == null) { AddError("CV not found."); return this; }
 
             var userId = _userHelper.GetUserId();
             if (userId == null || !await CanModify(cv, userId.Value))
@@ -79,20 +75,64 @@ namespace ProjectDefense.Service.Main
 
             cv.StatusCode = CVStatusConstants.PublishedStatusCode;
             cv.ModifiedUserId = userId;
-
             await _repository.Update(cv);
             await _repository.SaveChanges();
             return this;
         }
 
-        private async Task<int> CountMissingAttributes(int positionId, Guid userId)
+        // ---------- CV attribute display (composed from Position + UserAttribute, no CvAttribute table) ----------
+
+        public async Task<List<UserAttributeDto>> GetCvAttributesAsync(long cvId)
         {
-            var required = await _positionAttributeRepository.GetAll()
+            var cv = await _repository.GetById(cvId);
+            if (cv == null) { AddError("CV not found."); return []; }
+
+            var requiredAttributeIds = await GetRequiredAttributeIds(cv.PositionId);
+            var values = await GetAttributeValues(cv.UserId, requiredAttributeIds);
+
+            return values;
+        }
+
+        private Task<List<int>> GetRequiredAttributeIds(int positionId) =>
+            unitOfWork.PositionAttributeRepository()
+                .GetAll()
                 .Where(pa => pa.PositionId == positionId)
                 .Select(pa => pa.AttributeId)
                 .ToListAsync();
 
-            var filled = await _userAttributeRepository.GetAll()
+        private async Task<List<UserAttributeDto>> GetAttributeValues(Guid userId, List<int> attributeIds)
+        {
+            var rows = await unitOfWork.UserAttributeRepository()
+                .GetAll(ua => ua.Attribute!, ua => ua.ValueOption!)
+                .Where(ua => ua.UserId == userId && attributeIds.Contains(ua.AttributeId))
+                .ToListAsync();
+
+            return rows.Select(ToDto).ToList();
+        }
+
+        private static UserAttributeDto ToDto(UserAttribute ua) => new()
+        {
+            Id = ua.Id,
+            AttributeId = ua.AttributeId,
+            AttributeName = ua.Attribute?.Name ?? string.Empty,
+            DtypeCode = ua.Attribute?.DtypeCode ?? 0,
+            ValueGeneric = ua.ValueGeneric,
+            ValueNumeric = ua.ValueNumeric,
+            ValueDate = ua.ValueDate,
+            ValuePeriodStart = ua.ValuePeriodStart,
+            ValuePeriodEnd = ua.ValuePeriodEnd,
+            ValueBoolean = ua.ValueBoolean,
+            ValueOptionId = ua.ValueOptionId,
+            ValueOptionLabel = ua.ValueOption?.Label,
+            ValueContentId = ua.ValueContentId,
+            IsFilled = ua.ValueGeneric != null || ua.ValueNumeric != null || ua.ValueDate != null
+                       || ua.ValueBoolean != null || ua.ValueOptionId != null || ua.ValueContentId != null
+        };
+
+        private async Task<int> CountMissingAttributes(int positionId, Guid userId)
+        {
+            var required = await GetRequiredAttributeIds(positionId);
+            var filled = await unitOfWork.UserAttributeRepository().GetAll()
                 .Where(ua => ua.UserId == userId && required.Contains(ua.AttributeId) && HasValue(ua))
                 .Select(ua => ua.AttributeId)
                 .ToListAsync();

@@ -10,7 +10,7 @@ namespace ProjectDefense.Service.Auth.Interfaces
         Task<UserDto?> RegisterAsync(RegisterModel registerModel);
         Task<TokenDto?> LoginAsync(LoginModel loginModel);
         Task<TokenDto?> SocialLoginAsync(SocialLoginModel model);
-        Task<string> VerifyEmail(Guid verificationToken);
-        Task ResendVerificationEmailAsync(string email);
+        Task<IStatusGeneric> VerifyEmail(Guid verificationToken);
+        Task<IStatusGeneric> ResendVerificationEmailAsync(string email);
     }
 }

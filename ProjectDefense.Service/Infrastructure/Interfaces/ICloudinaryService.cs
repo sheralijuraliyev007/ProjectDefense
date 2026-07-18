@@ -1,4 +1,6 @@
-﻿namespace ProjectDefense.Service.Infrastructure.Interfaces
+﻿using ProjectDefense.Common.DTOs.Content;
+
+namespace ProjectDefense.Service.Infrastructure.Interfaces
 {
     public interface ICloudinaryService
     {

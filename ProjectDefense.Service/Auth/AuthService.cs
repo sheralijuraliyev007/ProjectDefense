@@ -117,11 +117,17 @@ namespace ProjectDefense.Service.Auth
             return user;
         }
 
-        public async Task<string> VerifyEmail(Guid verificationToken)
+        public async Task<IStatusGeneric> VerifyEmail(Guid verificationToken)
         {
             var user = await FindByVerificationToken(verificationToken);
-            if (user is null) return "Invalid or expired verification link.";
-            return await ConfirmVerification(user);
+            if (user is null)
+            {
+                AddError("Invalid or expired verification link.");
+                return this;
+            }
+
+            await ConfirmVerification(user);
+            return this;
         }
 
         private async Task<User?> FindByVerificationToken(Guid token)
@@ -133,24 +139,26 @@ namespace ProjectDefense.Service.Auth
         private static bool IsTokenValid(User? user) =>
             user is not null && user.VerificationTokenExpiry > DateTimeOffset.UtcNow;
 
-        private async Task<string> ConfirmVerification(User user)
+        private async Task ConfirmVerification(User user)
         {
             user.IsVerified = true;
             user.VerificationToken = null;
             user.VerificationTokenExpiry = null;
             await unitOfWork.UserRepository().Update(user);
             await unitOfWork.SaveChanges();
-            return "Email verified successfully.";
         }
 
-        public async Task ResendVerificationEmailAsync(string email)
+        public async Task<IStatusGeneric> ResendVerificationEmailAsync(string email)
         {
             var user = await unitOfWork.UserRepository().GetByEmail(email);
-            if (!CanResend(user)) return;
+            if (!CanResend(user)) return this;
+
             IssueVerificationToken(user!);
             await unitOfWork.UserRepository().Update(user!);
             await unitOfWork.SaveChanges();
             await emailService.SendVerificationEmailAsync(user!.Email, user.VerificationToken!.Value);
+
+            return this;
         }
 
         private bool CanResend(User? user)
@@ -163,12 +171,18 @@ namespace ProjectDefense.Service.Auth
         private async Task AttachStatus(User user)
         {
             var status = await unitOfWork.UserStatusRepository().GetAll().FirstOrDefaultAsync(s => s.Code == user.StatusCode);
+            if (status is null)
+                throw new InvalidOperationException($"No status found for code {user.StatusCode} — check seed data.");
+
             user.Status = status;
         }
 
         private async Task AttachRole(User user, short roleCode)
         {
             var role = await unitOfWork.RoleRepository().GetAll().FirstOrDefaultAsync(r => r.Code == roleCode);
+            if (role is null)
+                throw new InvalidOperationException($"No role found for code {roleCode} — check seed data.");
+
             var userRole = new UserRole { UserId = user.Id, RoleCode = roleCode, Role = role };
             await unitOfWork.UserRoleRepository().Add(userRole);
             await unitOfWork.SaveChanges();

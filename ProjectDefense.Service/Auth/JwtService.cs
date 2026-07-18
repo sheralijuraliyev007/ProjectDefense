@@ -2,6 +2,7 @@
 using Microsoft.IdentityModel.Tokens;
 using ProjectDefense.Common.DTOs.Auth;
 using ProjectDefense.Common.Settings.Jwt;
+using ProjectDefense.Data.Entities.MainEntities;
 using ProjectDefense.Service.Auth.Interfaces;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;

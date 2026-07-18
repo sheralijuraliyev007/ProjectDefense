@@ -15,6 +15,7 @@ namespace ProjectDefense.Service.Main.Base
         where TEntity : BaseEntity, IHasVersion
         where TFilterOptions : BaseFilterOptions
         where TDto : class
+        
     {
 
         protected readonly IBaseRepository<TEntity> _repository;
@@ -49,7 +50,7 @@ namespace ProjectDefense.Service.Main.Base
             return entity.MapToDto<TEntity, TDto>();
         }
 
-        public virtual async Task<TId?> AddAsync<TId>(TCreateModel createModel)
+        public virtual async Task<TId?> AddAsync<TId>(TCreateModel createModel) where TId : struct
         {
             var userId = _userHelper.GetUserId();
             if(userId == null)

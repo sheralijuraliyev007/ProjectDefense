@@ -2,11 +2,6 @@
 using ProjectDefense.Common.FilterOptions;
 using ProjectDefense.Common.Models.Main.Attribute;
 using ProjectDefense.Service.Main.Base.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ProjectDefense.Service.Main.Interfaces
 {

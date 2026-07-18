@@ -7,7 +7,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace ProjectDefense.Data.Entities.MainEntities
 {
     [Table("positions")]
-    public class Position: BaseEntity
+    public class Position: BaseEntity, IHasVersion
     {
         [Key]
         [Column("id")]
