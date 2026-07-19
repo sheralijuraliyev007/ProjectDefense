@@ -11,10 +11,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Controllers\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\ProjectDefense.Common\ProjectDefense.Common.csproj" />
     <ProjectReference Include="..\ProjectDefense.Service\ProjectDefense.Service.csproj" />
   </ItemGroup>
