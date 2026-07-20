@@ -1,4 +1,5 @@
-﻿using ProjectDefense.Common.DTOs.Attribute;
+﻿
+using ProjectDefense.Common.DTOs.Main;
 using ProjectDefense.Common.FilterOptions;
 using ProjectDefense.Common.Models.Main.Attribute;
 using ProjectDefense.Service.Main.Base.Interfaces;

@@ -14,19 +14,28 @@ using StatusGeneric;
 
 namespace ProjectDefense.Service.Auth
 {
-    internal class AuthService(
+    public class AuthService(
         IUnitOfWork unitOfWork,
         IEnumerable<ISocialLoginProvider> socialLoginProviders,
         IJwtService jwtService,
         IEmailService emailService) : StatusGenericHandler, IAuthService
     {
-        // ---------- Register ----------
+
 
         public async Task<UserDto?> RegisterAsync(RegisterModel registerModel)
         {
             if (await EmailTaken(registerModel.Email)) return null;
             var user = await CreateUser(registerModel);
-            await emailService.SendVerificationEmailAsync(user.Email, user.VerificationToken!.Value);
+
+            try
+            {
+                await emailService.SendVerificationEmailAsync(user.Email, user.VerificationToken!.Value);
+            }
+            catch (Exception)
+            {
+                AddError("Account created, but the verification email couldn't be sent. Please use 'resend verification' shortly.");
+            }
+
             return user.MapToDto<User, UserDto>(_config);
         }
 
@@ -42,7 +51,33 @@ namespace ProjectDefense.Service.Auth
             var user = new User { Email = model.Email, StatusCode = UserStatusConstants.ActiveStatusCode };
             user.PasswordHash = new PasswordHasher<User>().HashPassword(user, model.Password);
             await SaveNewUser(user);
+            await AttachBuiltInNameAttributes(user, model.FirstName, model.LastName);
             return user;
+        }
+
+        private async Task AttachBuiltInNameAttributes(User user, string firstName, string lastName)
+        {
+            await AttachNameAttribute(user, AttributeConstants.FirstName, firstName);
+            await AttachNameAttribute(user, AttributeConstants.LastName, lastName);
+        }
+
+        private async Task AttachNameAttribute(User user, string attributeName, string value)
+        {
+            var attribute = await unitOfWork.AttributeRepository().GetAll()
+                .FirstOrDefaultAsync(a => a.Name == attributeName);
+
+            if (attribute is null)
+                throw new InvalidOperationException($"No built-in attribute found named '{attributeName}' — check seed data.");
+
+            var userAttribute = new UserAttribute
+            {
+                UserId = user.Id,
+                AttributeId = attribute.Id,
+                ValueGeneric = value
+            };
+
+            await unitOfWork.UserAttributeRepository().Add(userAttribute);
+            await unitOfWork.SaveChanges();
         }
 
         private async Task SaveNewUser(User user)
@@ -114,6 +149,7 @@ namespace ProjectDefense.Service.Auth
         {
             var user = new User { Email = info.Email, IsVerified = info.EmailVerified, StatusCode = UserStatusConstants.ActiveStatusCode };
             await SaveNewUser(user);
+            await AttachBuiltInNameAttributes(user, info.FirstName ?? string.Empty, info.LastName ?? string.Empty);
             return user;
         }
 

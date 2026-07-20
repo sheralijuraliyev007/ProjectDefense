@@ -89,7 +89,7 @@ namespace ProjectDefense.Service.Admin.Users
             Id = u.Id,
             Email = u.Email,
             IsVerified = u.IsVerified,
-            Stats = u.StatusCode,
+            StatusCode = u.StatusCode,
             StatusName = u.Status?.Name ?? string.Empty,
             Roles = u.UserRoles.Select(ur => ur.Role?.Name ?? string.Empty).ToList()
         };

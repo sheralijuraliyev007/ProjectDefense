@@ -1,12 +1,15 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using ProjectDefense.Api.Hubs;
 using ProjectDefense.Common.Settings.Cloudinary;
+using ProjectDefense.Common.Settings.Facebook;
 using ProjectDefense.Common.Settings.Google;
 using ProjectDefense.Common.Settings.Jwt;
 using ProjectDefense.Data.Context;
 using ProjectDefense.Data.Repositories;
 using ProjectDefense.Data.Repositories.Interfaces;
-using ProjectDefense.Service.Admin;
 using ProjectDefense.Service.Admin.Base;
 using ProjectDefense.Service.Admin.Base.Interfaces;
 using ProjectDefense.Service.Admin.Interfaces;
@@ -20,6 +23,7 @@ using ProjectDefense.Service.Infrastructure;
 using ProjectDefense.Service.Infrastructure.Interfaces;
 using ProjectDefense.Service.Main;
 using ProjectDefense.Service.Main.Interfaces;
+using System.Text;
 
 
 
@@ -29,36 +33,66 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddSignalR();
 
-// ---- DbContext ----
+builder.Services.AddSwaggerGen(c =>
+{
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme()
+    {
+        Description = "JWT Bearer. : \"Authorization: Bearer { token } \"",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[]{}
+        }
+    });
+});
+
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// ---- Settings ----
+
 builder.Services.Configure<GoogleAuthSettings>(builder.Configuration.GetSection("Authentication:Google"));
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
-// TODO: also Configure<JwtSetting> and Configure<EmailSettings> if not already elsewhere
+builder.Services.Configure<GitHubAuthSettings>(builder.Configuration.GetSection("Authentication:GitHub"));
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<ISocialLoginProvider, GitHubLoginProvider>();
 
-// ---- Repositories ----
+
+
 builder.Services.AddScoped(typeof(IBaseRepository<>), typeof(BaseRepository<>));
 builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<IUnitOfWork,UnitOfWork>();
 
-// ---- Auth ----
+
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<ISocialLoginProvider, GoogleLoginProvider>();
 
-// ---- Infrastructure ----
+
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 
-// ---- Common ----
-builder.Services.AddScoped<ILookupService, LookupService>();
-builder.Services.AddScoped<IUserHelper, UserHelper>(); // confirm this is your actual IUserHelper impl name
 
-// ---- Main entities ----
+builder.Services.AddScoped<ILookupService, LookupService>();
+builder.Services.AddScoped<IUserHelper, UserHelper>(); 
+
+
 builder.Services.AddScoped<ICvService, CvService>();
 builder.Services.AddScoped<IPositionService, PositionService>();
 builder.Services.AddScoped<IProjectService, ProjectService>();
@@ -68,18 +102,18 @@ builder.Services.AddScoped<ITagService, TagService>();
 builder.Services.AddScoped<ILikeService, LikeService>();
 builder.Services.AddScoped<IDiscussionMessageService, DiscussionMessageService>();
 builder.Services.AddScoped<IPositionAccessService, PositionAccessService>();
-builder.Services.AddScoped<ISearchService, SearchService>();
+//builder.Services.AddScoped<ISearchService, SearchService>();
 
-// ---- Admin ----
-builder.Services.AddScoped<IAdminUserService, Admin>();
 
-// ---- Info lookup CRUD (generic) ----
+builder.Services.AddScoped<IAdminUserService, AdminUserService>();
+
+
 builder.Services.AddScoped(typeof(IBaseInfoService<>), typeof(BaseInfoService<>));
 
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSetting>()!;
 
-builder.Services.AddAuthentication(JwtBearerDe.AuthenticationScheme)
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
@@ -94,6 +128,18 @@ builder.Services.AddAuthentication(JwtBearerDe.AuthenticationScheme)
         };
     });
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowReactApp", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173", "http://localhost:3000") 
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials(); 
+    });
+});
+
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -103,6 +149,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors("AllowReactApp");
 app.UseAuthentication(); 
 app.UseAuthorization();
 

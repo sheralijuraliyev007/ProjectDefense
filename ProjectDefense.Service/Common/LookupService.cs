@@ -3,7 +3,6 @@ using ProjectDefense.Common.DTOs.Info;
 using ProjectDefense.Data.Entities.BaseEntities;
 using ProjectDefense.Data.Repositories.Interfaces;
 using ProjectDefense.Service.Admin.Interfaces;
-using ProjectDefense.Service.Common.Interfaces;
 
 namespace ProjectDefense.Service.Common
 {

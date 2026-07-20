@@ -1,5 +1,4 @@
-﻿using ProjectDefense.Common.DTOs.Auth;
-using StatusGeneric;
+﻿using StatusGeneric;
 
 namespace ProjectDefense.Service.Admin.Base.Interfaces
 {

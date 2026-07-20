@@ -8,9 +8,9 @@ using ProjectDefense.Service.Main.Interfaces;
 namespace ProjectDefense.Api.Controllers
 {
     public class ProjectController(IProjectService service)
-    : BaseMainController<IProjectService, ProjectFilterOptions, ProjectDto, ProjectCreateModel, ProjectUpdateModel>(service)
+        : BaseMainController<IProjectService, ProjectFilterOptions, ProjectDto, ProjectCreateModel, ProjectUpdateModel>(service)
     {
-        [HttpPut("{id:int}")]
+        [HttpPut("{id:int}/tags")]
         public async Task<IActionResult> SetTags(int id, [FromBody] List<string> tagLabels)
         {
             var result = await service.SetTagsAsync(id, tagLabels);

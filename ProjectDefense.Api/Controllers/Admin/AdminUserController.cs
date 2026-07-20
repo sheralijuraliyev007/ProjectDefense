@@ -48,14 +48,14 @@ namespace ProjectDefense.Api.Controllers.Admin
             return result.IsValid ? Ok(new ApiResponse<string> { Data = "Deleted." }) : BadRequest(result.Errors);
         }
 
-        [HttpPut("roles/{roleCode:short}/assign")]
+        [HttpPut("roles/{roleCode:int}/assign")]
         public async Task<IActionResult> AssignRole(short roleCode, [FromBody] List<Guid> userIds)
         {
             var result = await service.AssignRoleAsync(userIds, roleCode);
             return result.IsValid ? Ok(new ApiResponse<string> { Data = "Role assigned." }) : BadRequest(result.Errors);
         }
 
-        [HttpPut("roles/{roleCode:short}/remove")]
+        [HttpPut("roles/{roleCode:int}/remove")]
         public async Task<IActionResult> RemoveRole(short roleCode, [FromBody] List<Guid> userIds)
         {
             var result = await service.RemoveRoleAsync(userIds, roleCode);

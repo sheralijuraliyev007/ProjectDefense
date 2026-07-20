@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using ProjectDefense.Common.Constants;
-using ProjectDefense.Common.DTOs.Attribute;
+using ProjectDefense.Common.DTOs.Main;
 using ProjectDefense.Common.Extensions;
 using ProjectDefense.Common.FilterOptions;
 using ProjectDefense.Common.Models.Main.Attribute;

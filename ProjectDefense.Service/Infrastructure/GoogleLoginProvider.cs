@@ -25,7 +25,9 @@ namespace ProjectDefense.Service.Infrastructure
             {
                 Email = payload.Email,
                 ExternalId = payload.Subject,
-                EmailVerified = payload.EmailVerified
+                EmailVerified = payload.EmailVerified,
+                FirstName = payload.GivenName,
+                LastName = payload.FamilyName
             };
         }
     }
