@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Chip, Input } from '@heroui/react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { Chip } from '@heroui/react';
 
 export default function TagInput({ tags, onChange, placeholder, suggestions = [] }) {
   const [inputValue, setInputValue] = useState('');
@@ -9,7 +8,8 @@ export default function TagInput({ tags, onChange, placeholder, suggestions = []
 
   const addTag = useCallback((tag) => {
     const trimmed = tag.trim();
-    if (trimmed && !tags.includes(trimmed)) {
+    const exists = tags.some((t) => t.toLowerCase() === trimmed.toLowerCase());
+    if (trimmed && !exists) {
       onChange([...tags, trimmed]);
     }
     setInputValue('');
@@ -17,7 +17,7 @@ export default function TagInput({ tags, onChange, placeholder, suggestions = []
   }, [tags, onChange]);
 
   const removeTag = useCallback((tagToRemove) => {
-    onChange(tags.filter(tag => tag !== tagToRemove));
+    onChange(tags.filter((tag) => tag !== tagToRemove));
   }, [tags, onChange]);
 
   const handleKeyDown = (e) => {
@@ -30,7 +30,7 @@ export default function TagInput({ tags, onChange, placeholder, suggestions = []
   };
 
   const filteredSuggestions = suggestions.filter(
-    s => s.toLowerCase().includes(inputValue.toLowerCase()) && !tags.includes(s)
+    (s) => s.toLowerCase().includes(inputValue.toLowerCase()) && !tags.includes(s)
   );
 
   return (
@@ -62,7 +62,7 @@ export default function TagInput({ tags, onChange, placeholder, suggestions = []
       </div>
       {showSuggestions && inputValue && filteredSuggestions.length > 0 && (
         <div className="mt-1 border border-default-200 rounded-lg shadow-lg bg-background z-50 max-h-32 overflow-y-auto">
-          {filteredSuggestions.map(s => (
+          {filteredSuggestions.map((s) => (
             <div
               key={s}
               className="px-3 py-2 hover:bg-default-100 cursor-pointer text-sm"

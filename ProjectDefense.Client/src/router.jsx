@@ -11,6 +11,8 @@ import NotFoundPage from './pages/public/NotFoundPage';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import GithubCallbackPage from './pages/auth/GithubCallbackPage';
+import VerifyEmailPage from './pages/auth/VerifyEmailPage';
+
 
 // Candidate pages
 import ProfilePage from './pages/candidate/ProfilePage';
@@ -45,6 +47,7 @@ const router = createBrowserRouter([
       { path: 'login', element: <LoginPage /> },
       { path: 'register', element: <RegisterPage /> },
       { path: 'auth/github/callback', element: <GithubCallbackPage /> },
+      { path: 'verify-email', element: <VerifyEmailPage /> },
       
       
       {

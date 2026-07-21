@@ -8,14 +8,15 @@ using ProjectDefense.Data.Entities.MainEntities;
 using ProjectDefense.Data.Repositories.Interfaces;
 using ProjectDefense.Service.Admin.Users.Interfaces;
 using ProjectDefense.Service.Admin.Users.QueryObjects;
+using ProjectDefense.Service.Common.Interfaces;
 using StatusGeneric;
 
 namespace ProjectDefense.Service.Admin.Users
 {
-    public class AdminUserService(IUnitOfWork unitOfWork) : StatusGenericHandler, IAdminUserService
+    public class AdminUserService(IUnitOfWork unitOfWork, IUserHelper userHelper) : StatusGenericHandler, IAdminUserService
     {
-        
-        public async Task<UserDto?> GetByIdAsync(Guid userId)
+
+        public async Task<UserDtoForAdmin?> GetByIdAsync(Guid userId)
         {
             var user = await FindUsers([userId]).FirstOrDefaultAsync();
             if (user == null) { AddError("User not found."); return null; }
@@ -69,11 +70,15 @@ namespace ProjectDefense.Service.Admin.Users
 
         private async Task<IStatusGeneric> SetStatus(List<Guid> userIds, short statusCode)
         {
+            
+
             var users = await FindUsers(userIds).ToListAsync();
             if (users.Count == 0) { AddError("No matching users found."); return this; }
 
-            foreach (var user in users)
+            foreach (var user in users) { 
                 user.StatusCode = statusCode;
+                user.ModifiedUserId = userHelper.GetUserId();
+            }
 
             unitOfWork.UserRepository().UpdateRange(users);
             await unitOfWork.SaveChanges();
@@ -81,28 +86,35 @@ namespace ProjectDefense.Service.Admin.Users
         }
 
         private IQueryable<User> FindUsers(List<Guid> userIds) =>
-            unitOfWork.UserRepository().GetAll(u => u.Status!, u => u.UserRoles)
+            unitOfWork.UserRepository().GetAll(u => u.Status!)
+                .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
                 .Where(u => userIds.Contains(u.Id));
 
-        private static UserDto ToDto(User u) => new()
+        private static UserDtoForAdmin ToDto(User u) => new()
         {
             Id = u.Id,
             Email = u.Email,
             IsVerified = u.IsVerified,
             StatusCode = u.StatusCode,
             StatusName = u.Status?.Name ?? string.Empty,
-            Roles = u.UserRoles.Select(ur => ur.Role?.Name ?? string.Empty).ToList()
+            Roles = u.UserRoles.Select(ur => ur.Role?.Name ?? string.Empty).ToList(),
+            RoleId = u.UserRoles.Select(ur => ur.RoleCode).ToList(),
+            CreatedDateTime = u.CreatedDateTime,
+            CreatedUserId = u.CreatedUserId,
+            ModifiedDateTime = u.ModifiedDateTime,
+            ModifiedUserId = u.ModifiedUserId
         };
 
-        public async Task<PaginationModel<UserDto>> GetAllAsync(UserFilterOptions filterOptions)
+        public async Task<PaginationModel<UserDtoForAdmin>> GetAllAsync(UserFilterOptions filterOptions)
         {
             var query = unitOfWork.UserRepository()
-                .GetAll(u => u.Status!, u => u.UserRoles)
+                .GetAll(u => u.Status!)
+                .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
                 .ApplyFilter(filterOptions);
 
             var page = await query.ToPaginationModelAsync(filterOptions.Page, filterOptions.PageSize);
 
-            return new PaginationModel<UserDto>
+            return new PaginationModel<UserDtoForAdmin>
             {
                 Rows = page.Rows.Select(ToDto).ToList(),
                 PageIndex = page.PageIndex,

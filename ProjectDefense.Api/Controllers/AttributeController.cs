@@ -10,7 +10,7 @@ namespace ProjectDefense.Api.Controllers
     public class AttributeController(IAttributeService service)
     : BaseMainController<IAttributeService, AttributeFilterOptions, AttributeDto, AttributeCreateModel, AttributeUpdateModel>(service)
     {
-        [HttpGet]
+        [HttpGet("searchByPrefix")]
         public async Task<IActionResult> SearchByPrefix([FromQuery] string prefix, [FromQuery] int limit = 10)
         {
             var result = await service.SearchByPrefixAsync(prefix, limit);

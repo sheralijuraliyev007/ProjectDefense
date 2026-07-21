@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using ProjectDefense.Common.Constants;
 using ProjectDefense.Common.DTOs.Main;
-using ProjectDefense.Common.Extensions;
 using ProjectDefense.Common.Models.Main.UserAttribute;
 using ProjectDefense.Data.Entities.MainEntities;
 using ProjectDefense.Data.Repositories.Interfaces;
@@ -11,8 +10,9 @@ using StatusGeneric;
 
 namespace ProjectDefense.Service.Main
 {
-    public class UserAttributeService(IUnitOfWork unitOfWork, IUserHelper userHelper) : StatusGenericHandler,IUserAttributeService
+    public class UserAttributeService(IUnitOfWork unitOfWork, IUserHelper userHelper) : StatusGenericHandler, IUserAttributeService
     {
+        public const string VersionConflictMarker = "VERSION_CONFLICT";
 
         public async Task<IStatusGeneric> AddAttributeAsync(int attributeId, Guid? targetUserId = null)
         {
@@ -57,15 +57,17 @@ namespace ProjectDefense.Service.Main
         public async Task<List<UserAttributeDto>> GetMyAttributesAsync()
         {
             var userId = userHelper.GetUserId();
-            if(userId == null)
+            if (userId == null)
             {
                 AddError("You are not logged in");
                 return [];
             }
-            var rows = await unitOfWork.UserAttributeRepository().GetAll(ua => ua.Attribute!, ua => ua.ValueOption!)
-                .Where(ua => ua.UserId == userId).ToListAsync();
 
-            return rows.MapToDtos<UserAttribute, UserAttributeDto>();
+            var rows = await unitOfWork.UserAttributeRepository().GetAll(ua => ua.Attribute!, ua => ua.ValueOption!)
+                .Where(ua => ua.UserId == userId)
+                .ToListAsync();
+
+            return rows.Select(ToDto).ToList();
         }
 
         public async Task<IStatusGeneric> RemoveAttributeAsync(int attributeId, Guid? targetUserId = null)
@@ -96,41 +98,58 @@ namespace ProjectDefense.Service.Main
             return this;
         }
 
-        public async Task<IStatusGeneric> SetValueAsync(SetUserAttributeValueModel model, Guid? targetUserId = null)
+        public async Task<(IStatusGeneric Status, int? NewVersion)> SetValueAsync(SetUserAttributeValueModel model, Guid? targetUserId = null)
         {
-            var callerId = userHelper.GetUserId();
-            if (callerId == null) { AddError("Not logged in."); return this; }
+            var authResult = await AuthorizeOwner(targetUserId);
+            if (authResult.Error != null) { AddError(authResult.Error); return (this, null); }
 
-            var ownerId = targetUserId ?? callerId.Value;
+            var entry = await FindUserAttribute(authResult.OwnerId, model.AttributeId);
+            if (entry == null) { AddError("Add this attribute to your profile first."); return (this, null); }
 
-            if (ownerId != callerId && !await IsAdministrator(callerId.Value))
+            if (entry.Version != model.Version)
             {
-                AddError("You're not allowed to edit this profile.");
-                return this;
+                AddError(VersionConflictMarker);
+                return (this, entry.Version);
             }
 
-            var entry = await unitOfWork.UserAttributeRepository().GetAll()
-                .FirstOrDefaultAsync(ua => ua.UserId == ownerId && ua.AttributeId == model.AttributeId);
-            if (entry == null) { AddError("Add this attribute to your profile first."); return this; }
+            return await ApplyAndSave(entry, model, authResult.CallerId);
+        }
 
+        private async Task<(Guid? CallerId, Guid OwnerId, string? Error)> AuthorizeOwner(Guid? targetUserId)
+        {
+            var callerId = userHelper.GetUserId();
+            if (callerId == null) return (null, default, "Not logged in.");
+
+            var ownerId = targetUserId ?? callerId.Value;
+            if (ownerId != callerId && !await IsAdministrator(callerId.Value))
+                return (callerId, ownerId, "You're not allowed to edit this profile.");
+
+            return (callerId, ownerId, null);
+        }
+
+        private Task<UserAttribute?> FindUserAttribute(Guid ownerId, int attributeId) =>
+            unitOfWork.UserAttributeRepository().GetAll()
+                .FirstOrDefaultAsync(ua => ua.UserId == ownerId && ua.AttributeId == attributeId);
+
+        private async Task<(IStatusGeneric, int?)> ApplyAndSave(UserAttribute entry, SetUserAttributeValueModel model, Guid? callerId)
+        {
             var attribute = await unitOfWork.AttributeRepository().GetById(model.AttributeId);
-            if (attribute == null) { AddError("Attribute not found."); return this; }
+            if (attribute == null) { AddError("Attribute not found."); return (this, null); }
 
             if (!TryApplyValue(entry, attribute.DtypeCode, model))
             {
                 AddError("The value doesn't match this attribute's type.");
-                return this;
+                return (this, null);
             }
 
             entry.ModifiedUserId = callerId;
             entry.Version++;
             await unitOfWork.UserAttributeRepository().Update(entry);
             await unitOfWork.SaveChanges();
-            return this;
+            return (this, entry.Version);
         }
 
-        private  Task<bool> IsAdministrator(Guid userId) => unitOfWork.UserRoleRepository().GetAll().AnyAsync(ur => ur.UserId == userId && ur.RoleCode == RoleConstants.Administrator);
-
+        private Task<bool> IsAdministrator(Guid userId) => unitOfWork.UserRoleRepository().GetAll().AnyAsync(ur => ur.UserId == userId && ur.RoleCode == RoleConstants.Administrator);
 
         private async Task<(bool, Guid?)> UserExist()
         {
@@ -141,7 +160,6 @@ namespace ProjectDefense.Service.Main
             }
             var user = await unitOfWork.UserRepository().GetById(userId);
             return (user != null, userId);
-
         }
 
         private async Task<(bool, Data.Entities.MainEntities.Attribute?)> AttributeExist(int attributeId)
@@ -161,7 +179,6 @@ namespace ProjectDefense.Service.Main
             [AttributeDtypeConstants.Date] = (e, m) => e.ValueDate = m.ValueDate,
         };
 
-
         private static bool TryApplyValue(UserAttribute userAttribute, short dtypeCode, SetUserAttributeValueModel model)
         {
             if (dtypeCode == AttributeDtypeConstants.Period)
@@ -180,5 +197,26 @@ namespace ProjectDefense.Service.Main
             userAttribute.ValuePeriodEnd = model.ValuePeriodEnd;
             return true;
         }
+
+        private static UserAttributeDto ToDto(UserAttribute ua) => new()
+        {
+            Id = ua.Id,
+            AttributeId = ua.AttributeId,
+            AttributeName = ua.Attribute?.Name ?? string.Empty,
+            DtypeCode = ua.Attribute?.DtypeCode ?? 0,
+            Version = ua.Version,
+            ValueGeneric = ua.ValueGeneric,
+            ValueNumeric = ua.ValueNumeric,
+            ValueDate = ua.ValueDate,
+            ValuePeriodStart = ua.ValuePeriodStart,
+            ValuePeriodEnd = ua.ValuePeriodEnd,
+            ValueBoolean = ua.ValueBoolean,
+            ValueOptionId = ua.ValueOptionId,
+            ValueOptionLabel = ua.ValueOption?.Label,
+            ValueContentId = ua.ValueContentId,
+            IsFilled = ua.ValueGeneric != null || ua.ValueNumeric != null || ua.ValueDate != null
+               || ua.ValueBoolean != null || ua.ValueOptionId != null || ua.ValueContentId != null,
+            IsRemovable = ua.Attribute?.IsRemovable ?? true
+        };
     }
 }

@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ProjectDefense.Data")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4c44f21b199f2bf6af1ea91e6dfc6ab2a2ae7b49")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9ffd8c31f78d8b91c78c611cf784d42bed4764fb")]
 [assembly: System.Reflection.AssemblyProductAttribute("ProjectDefense.Data")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ProjectDefense.Data")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

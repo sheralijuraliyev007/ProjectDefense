@@ -6,8 +6,6 @@ import {
   TableColumn,
   TableRow,
   TableCell,
-  Checkbox,
-  Pagination,
   Spinner,
 } from '@heroui/react';
 
@@ -23,6 +21,7 @@ export default function DataTable({
   sortDescriptor,
   onSortChange,
   bottomContent,
+  removeWrapper = false,
   className = '',
 }) {
   const [hoveredRow, setHoveredRow] = useState(null);
@@ -30,11 +29,11 @@ export default function DataTable({
   const renderCell = useCallback((item, columnKey) => {
     const column = columns.find(c => c.key === columnKey);
     if (!column) return null;
-    
+
     if (column.renderCell) {
       return column.renderCell(item);
     }
-    
+
     return item[columnKey];
   }, [columns]);
 
@@ -48,6 +47,7 @@ export default function DataTable({
       onSortChange={onSortChange}
       className={className}
       bottomContent={bottomContent}
+      removeWrapper={removeWrapper}
     >
       <TableHeader columns={columns}>
         {(column) => (

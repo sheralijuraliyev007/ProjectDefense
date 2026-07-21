@@ -17,14 +17,14 @@ namespace ProjectDefense.Api.Controllers.Admin
         public async Task<IActionResult> GetAll([FromBody] UserFilterOptions filterOptions)
         {
             var result = await service.GetAllAsync(filterOptions);
-            return service.IsValid ? Ok(new ApiResponse<PaginationModel<UserDto>> { Data = result }) : BadRequest(service.Errors);
+            return service.IsValid ? Ok(new ApiResponse<PaginationModel<UserDtoForAdmin>> { Data = result }) : BadRequest(service.Errors);
         }
 
         [HttpGet("{userId:guid}")]
         public async Task<IActionResult> GetById(Guid userId)
         {
             var result = await service.GetByIdAsync(userId);
-            return service.IsValid ? Ok(new ApiResponse<UserDto?> { Data = result }) : NotFound(service.Errors);
+            return service.IsValid ? Ok(new ApiResponse<UserDtoForAdmin?> { Data = result }) : NotFound(service.Errors);
         }
 
         [HttpPut("block")]

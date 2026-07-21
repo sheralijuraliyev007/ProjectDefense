@@ -11,6 +11,7 @@ using ProjectDefense.Service.Common.Interfaces;
 using ProjectDefense.Service.Main.Base;
 using ProjectDefense.Service.Main.Interfaces;
 using ProjectDefense.Service.Main.QueryObjects;
+using StatusGeneric;
 
 namespace ProjectDefense.Service.Main
 {
@@ -72,6 +73,23 @@ namespace ProjectDefense.Service.Main
 
             return id;
 
+        }
+        public override async Task<IStatusGeneric> DeleteAsync<TId>(TId id)
+        {
+            var entity = await _repository.GetById(id);
+            if (entity is null)
+            {
+                AddError("Entity not found");
+                return this;
+            }
+
+            if (!entity.IsRemovable)
+            {
+                AddError($"'{entity.Name}' is a built-in attribute and cannot be deleted.");
+                return this;
+            }
+
+            return await base.DeleteAsync(id);
         }
 
         private async Task SaveOptions(int attributeId, List<string> labels)

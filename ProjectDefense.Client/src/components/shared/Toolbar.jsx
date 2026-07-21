@@ -1,4 +1,4 @@
-import { Button, Tooltip } from '@heroui/react';
+import { Button } from '@heroui/react';
 
 export default function Toolbar({ actions, selectedCount = 0 }) {
   return (
@@ -10,21 +10,18 @@ export default function Toolbar({ actions, selectedCount = 0 }) {
       )}
       {actions.map((action, index) => {
         const isDisabled = action.requiresSelection && selectedCount === 0;
-        
+
         return (
-          <Tooltip key={index} content={action.label}>
-            <Button
-              size="sm"
-              color={action.color || 'default'}
-              variant={action.variant || 'flat'}
-              isDisabled={isDisabled}
-              onPress={action.onClick}
-              startContent={action.icon}
-              isIconOnly={!!action.icon && !action.label}
-            >
-              {action.label}
-            </Button>
-          </Tooltip>
+          <Button
+            key={index}
+            size="sm"
+            color={action.color || 'default'}
+            variant={action.variant || 'solid'}
+            isDisabled={isDisabled}
+            onPress={action.onClick}
+          >
+            {action.label}
+          </Button>
         );
       })}
     </div>

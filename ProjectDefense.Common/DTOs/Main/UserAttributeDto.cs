@@ -15,6 +15,8 @@
         public int? ValueOptionId { get; set; }
         public string? ValueOptionLabel { get; set; }
         public long? ValueContentId { get; set; }
+        public int Version { get; set; }
         public bool IsFilled { get; set; }
+        public bool IsRemovable { get; set; }
     }
 }

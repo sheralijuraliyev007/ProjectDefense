@@ -106,6 +106,7 @@ namespace ProjectDefense.Service.Auth
         {
             if (user is null) { AddError("Invalid email or password."); return false; }
             if (user.PasswordHash is null) { AddError("This account uses social login."); return false; }
+            if (!user.IsVerified) { AddError("Need to verufy email before signing in"); return false; }
             return VerifyPassword(user, password);
         }
 
@@ -136,7 +137,7 @@ namespace ProjectDefense.Service.Auth
         private async Task<SocialUserInfoDto?> ValidateSocialToken(ISocialLoginProvider provider, string idToken)
         {
             try { return await provider.ValidateTokenAsync(idToken); }
-            catch (Exception) { AddError("Invalid or expired social login token."); return null; }
+            catch (Exception ex) { AddError($"Invalid or expired social login token: {ex.Message}"); return null; }
         }
 
         private async Task<User> FindOrCreateSocialUser(SocialUserInfoDto info)

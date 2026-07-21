@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using ProjectDefense.Api.Hubs;
+using ProjectDefense.Common.Mapping;
 using ProjectDefense.Common.Settings.Cloudinary;
 using ProjectDefense.Common.Settings.Facebook;
 using ProjectDefense.Common.Settings.Google;
@@ -102,6 +103,7 @@ builder.Services.AddScoped<ITagService, TagService>();
 builder.Services.AddScoped<ILikeService, LikeService>();
 builder.Services.AddScoped<IDiscussionMessageService, DiscussionMessageService>();
 builder.Services.AddScoped<IPositionAccessService, PositionAccessService>();
+builder.Services.AddScoped<IContentService, ContentService>();
 //builder.Services.AddScoped<ISearchService, SearchService>();
 
 
@@ -110,7 +112,7 @@ builder.Services.AddScoped<IAdminUserService, AdminUserService>();
 
 builder.Services.AddScoped(typeof(IBaseInfoService<>), typeof(BaseInfoService<>));
 
-
+AttributeMapConfig.Register();
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSetting>()!;
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -148,9 +150,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
 app.UseCors("AllowReactApp");
-app.UseAuthentication(); 
+app.UseHttpsRedirection();
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

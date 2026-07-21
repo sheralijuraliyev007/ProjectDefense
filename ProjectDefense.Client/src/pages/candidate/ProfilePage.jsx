@@ -1,534 +1,347 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
-import {
-  Tabs,
-  Tab,
-  Card,
-  CardBody,
-  Input,
-  Button,
-  Avatar,
-  Chip,
-  Badge,
-} from '@heroui/react';
-import {
-  UserIcon,
-  InformationCircleIcon,
-  FolderIcon,
-  DocumentTextIcon,
-  PlusIcon,
-  TrashIcon,
-  PencilIcon,
-} from '@heroicons/react/24/outline';
-import { useDebounce } from '../../hooks/useDebounce';
-import { useAutoSave } from '../../hooks/useAutoSave';
-import MarkdownEditor from '../../components/shared/MarkdownEditor';
-import TagInput from '../../components/shared/TagInput';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Tabs, Tab, Card, CardBody, Input, Chip, Spinner } from '@heroui/react';
+import { UserIcon, InformationCircleIcon, TrashIcon } from '@heroicons/react/24/outline';
 import DataTable from '../../components/shared/DataTable';
 import Toolbar from '../../components/shared/Toolbar';
-import ConfirmDialog from '../../components/shared/ConfirmDialog';
-import { useDisclosure } from '@heroui/react';
+import userAttributeApi from '../../api/userAttributeApi';
+import attributeApi from '../../api/attributeApi';
 
-// API imports (you'll need to create these)
-const profileApi = {
-  getProfile: () => Promise.resolve({}),
-  saveProfile: (data, version) => Promise.resolve({ newVersion: version + 1 }),
-  getAvailableAttributes: () => Promise.resolve([]),
+const DTYPE = {
+  STRING: 1, TEXT: 2, IMAGE: 3, NUMERIC: 4, DATE: 5, PERIOD: 6, BOOLEAN: 7, ONE_OF_MANY: 8,
 };
 
-export default function ProfilePage() {
-  const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState('me');
-  const [profile, setProfile] = useState({
-    firstName: '',
-    lastName: '',
-    location: '',
-    photoUrl: '',
-    infoAttributes: [],
-    projects: [],
-    cvs: [],
-  });
-  const [version, setVersion] = useState(0);
-  const [availableAttributes, setAvailableAttributes] = useState([]);
-  const [selectedProjectKeys, setSelectedProjectKeys] = useState(new Set());
-  const [editingProject, setEditingProject] = useState(null);
+function buildValuePayload(attributeId, dtypeCode, rawValue, version) {
+  const base = { attributeId, version };
+  switch (dtypeCode) {
+    case DTYPE.STRING:
+    case DTYPE.TEXT:
+      return { ...base, valueGeneric: rawValue };
+    case DTYPE.NUMERIC:
+      return { ...base, valueNumeric: rawValue === '' ? null : Number(rawValue) };
+    case DTYPE.DATE:
+      return { ...base, valueDate: rawValue || null };
+    case DTYPE.BOOLEAN:
+      return { ...base, valueBoolean: !!rawValue };
+    case DTYPE.ONE_OF_MANY:
+      return { ...base, valueOptionId: rawValue ? Number(rawValue) : null };
+    default:
+      return base;
+  }
+}
 
-  // Auto-save hook
-  const { isSaving, lastSaved, conflict, resolveConflict } = useAutoSave(
-    async (data, ver) => {
-      const result = await profileApi.saveProfile(data, ver);
-      setVersion(result.newVersion);
-      return result;
-    },
-    profile,
-    { delay: 7000, version }
+function readValue(attr) {
+  switch (attr.dtypeCode) {
+    case DTYPE.STRING:
+    case DTYPE.TEXT:
+      return attr.valueGeneric ?? '';
+    case DTYPE.NUMERIC:
+      return attr.valueNumeric ?? '';
+    case DTYPE.DATE:
+      return attr.valueDate ? attr.valueDate.slice(0, 10) : '';
+    case DTYPE.BOOLEAN:
+      return !!attr.valueBoolean;
+    case DTYPE.ONE_OF_MANY:
+      return attr.valueOptionId ?? '';
+    default:
+      return '';
+  }
+}
+
+const AUTO_SAVE_INTERVAL_MS = 7000; // within the 5-10s window required by spec
+
+const ConflictNote = () => (
+  <p className="text-warning text-xs mt-1">This was changed elsewhere — refreshed from server.</p>
+);
+
+export default function ProfilePage() {
+  const [activeTab, setActiveTab] = useState('me');
+  const [myAttributes, setMyAttributes] = useState([]);
+  const [availableAttributes, setAvailableAttributes] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [savingIds, setSavingIds] = useState(new Set());
+  const [conflictIds, setConflictIds] = useState(new Set());
+  const [selectedAttrKeys, setSelectedAttrKeys] = useState(new Set());
+
+  // attributeId -> { attr, rawValue } — tracks unsaved edits between auto-save ticks
+  const dirtyRef = useRef(new Map());
+
+  const loadMyAttributes = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await userAttributeApi.getMine();
+      setMyAttributes(res.data.data ?? []);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const loadAvailableAttributes = useCallback(async () => {
+    const res = await attributeApi.search({ page: 1, pageSize: 200 });
+    setAvailableAttributes(res.data.data?.rows ?? []);
+  }, []);
+
+  useEffect(() => {
+    loadMyAttributes();
+    loadAvailableAttributes();
+  }, [loadMyAttributes, loadAvailableAttributes]);
+
+  const meAttributes = useMemo(() => myAttributes.filter((a) => !a.isRemovable), [myAttributes]);
+  const infoAttributes = useMemo(() => myAttributes.filter((a) => a.isRemovable), [myAttributes]);
+  const addableAttributes = useMemo(
+    () => availableAttributes.filter((a) => !myAttributes.some((m) => m.attributeId === a.id)),
+    [availableAttributes, myAttributes]
   );
 
-  // Fetch profile on mount
+  // Records a local edit; nothing is sent to the server until the next auto-save tick.
+  const markDirty = useCallback((attr, rawValue) => {
+    dirtyRef.current.set(attr.attributeId, { attr, rawValue });
+    setConflictIds((prev) => {
+      if (!prev.has(attr.attributeId)) return prev;
+      const next = new Set(prev);
+      next.delete(attr.attributeId);
+      return next;
+    });
+  }, []);
+
+  // Sends all pending edits, handles per-field 409 conflicts, then refreshes from server.
+  const flushDirty = useCallback(async () => {
+    if (dirtyRef.current.size === 0) return;
+    const entries = Array.from(dirtyRef.current.entries());
+    dirtyRef.current.clear();
+
+    for (const [attributeId, { attr, rawValue }] of entries) {
+      setSavingIds((prev) => new Set(prev).add(attributeId));
+      try {
+        const payload = buildValuePayload(attributeId, attr.dtypeCode, rawValue, attr.version);
+        await userAttributeApi.setValue(payload);
+      } catch (err) {
+        if (err.response?.status === 409) {
+          setConflictIds((prev) => new Set(prev).add(attributeId));
+        }
+      } finally {
+        setSavingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(attributeId);
+          return next;
+        });
+      }
+    }
+    await loadMyAttributes(); // pulls fresh values + current versions
+  }, [loadMyAttributes]);
+
   useEffect(() => {
-    const loadProfile = async () => {
-      const data = await profileApi.getProfile();
-      setProfile(data);
-      setVersion(data.version || 0);
+    const id = setInterval(flushDirty, AUTO_SAVE_INTERVAL_MS);
+    return () => {
+      clearInterval(id);
+      flushDirty(); // save any pending edits on unmount / tab switch away
     };
-    loadProfile();
-  }, []);
+  }, [flushDirty]);
 
-  // Fetch available attributes for "Info" tab
-  useEffect(() => {
-    const loadAttributes = async () => {
-      const attrs = await profileApi.getAvailableAttributes();
-      setAvailableAttributes(attrs);
-    };
-    loadAttributes();
-  }, []);
+  const handleAddAttribute = async (attributeIdStr) => {
+    const attributeId = Number(attributeIdStr);
+    if (!attributeId) return;
+    await userAttributeApi.add(attributeId);
+    await loadMyAttributes();
+  };
 
-  const updateProfile = useCallback((updates) => {
-    setProfile(prev => ({ ...prev, ...updates }));
-  }, []);
+  const handleRemoveSelected = async () => {
+    const ids = Array.from(selectedAttrKeys).map(Number);
+    await Promise.all(ids.map((id) => userAttributeApi.remove(id)));
+    setSelectedAttrKeys(new Set());
+    await loadMyAttributes();
+  };
 
-  // ─── ME SECTION ───
+  const renderValueInput = (attr) => {
+    const currentValue = readValue(attr);
+    const isSaving = savingIds.has(attr.attributeId);
+    const hasConflict = conflictIds.has(attr.attributeId);
+    const inputClasses = "border border-default-300 bg-content1 rounded-lg focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20";
+
+    switch (attr.dtypeCode) {
+      case DTYPE.BOOLEAN:
+        return (
+          <div>
+            <label className="flex items-center gap-2 border border-default-300 bg-content1 rounded-lg px-3 py-2 w-fit cursor-pointer hover:border-primary/50">
+              <input
+                type="checkbox"
+                key={`${attr.attributeId}-${attr.version}`}
+                defaultChecked={currentValue}
+                onChange={(e) => markDirty(attr, e.target.checked)}
+                className="w-4 h-4 accent-primary"
+              />
+              <span className="text-sm">{currentValue ? 'Yes' : 'No'}</span>
+              {isSaving && <Spinner size="sm" />}
+            </label>
+            {hasConflict && <ConflictNote />}
+          </div>
+        );
+      case DTYPE.NUMERIC:
+        return (
+          <div>
+            <Input
+              key={`${attr.attributeId}-${attr.version}`}
+              type="number"
+              size="sm"
+              variant="bordered"
+              classNames={{ inputWrapper: inputClasses }}
+              defaultValue={currentValue}
+              onChange={(e) => markDirty(attr, e.target.value)}
+              endContent={isSaving && <Spinner size="sm" />}
+            />
+            {hasConflict && <ConflictNote />}
+          </div>
+        );
+      case DTYPE.DATE:
+        return (
+          <div>
+            <Input
+              key={`${attr.attributeId}-${attr.version}`}
+              type="date"
+              size="sm"
+              variant="bordered"
+              classNames={{ inputWrapper: inputClasses }}
+              defaultValue={currentValue}
+              onChange={(e) => markDirty(attr, e.target.value)}
+            />
+            {hasConflict && <ConflictNote />}
+          </div>
+        );
+      case DTYPE.ONE_OF_MANY:
+        return (
+          <Input
+            key={`${attr.attributeId}-${attr.version}`}
+            size="sm"
+            variant="bordered"
+            classNames={{ inputWrapper: inputClasses }}
+            defaultValue={currentValue}
+            placeholder="Option id"
+            onChange={(e) => markDirty(attr, e.target.value)}
+          />
+        );
+      case DTYPE.IMAGE:
+        return (
+          <div className="border-2 border-dashed border-default-300 rounded-lg px-4 py-3 text-center text-default-400 text-sm">
+            Photo upload coming soon
+          </div>
+        );
+      default:
+        return (
+          <div>
+            <Input
+              key={`${attr.attributeId}-${attr.version}`}
+              size="sm"
+              variant="bordered"
+              classNames={{ inputWrapper: inputClasses }}
+              defaultValue={currentValue}
+              onChange={(e) => markDirty(attr, e.target.value)}
+              endContent={isSaving && <Spinner size="sm" />}
+            />
+            {hasConflict && <ConflictNote />}
+          </div>
+        );
+    }
+  };
+
   const MeSection = () => (
-    <div className="space-y-4 max-w-2xl">
-      <div className="flex items-center gap-4 mb-6">
-        <Avatar
-          src={profile.photoUrl}
-          name={`${profile.firstName} ${profile.lastName}`}
-          className="w-24 h-24 text-2xl"
-        />
-        <div>
-          <h3 className="text-lg font-semibold">{t('profile.me')}</h3>
-          <p className="text-default-500 text-sm">{t('profile.autoSave')}</p>
-          {isSaving && <Badge color="warning" size="sm">{t('profile.saving')}</Badge>}
-          {lastSaved && <Badge color="success" size="sm">{t('profile.saved')}</Badge>}
+    <div className="space-y-5 max-w-xl">
+      {isLoading && <Spinner size="sm" />}
+      {!isLoading && meAttributes.length === 0 && (
+        <p className="text-default-500 text-sm">No profile fields yet.</p>
+      )}
+      {meAttributes.map((attr) => (
+        <div key={attr.attributeId} className="border border-default-200 rounded-xl p-4 bg-content1">
+          <label className="text-sm font-medium text-default-700 mb-2 block">{attr.attributeName}</label>
+          {renderValueInput(attr)}
+          {!attr.isFilled && <p className="text-danger text-xs mt-2">Not filled in</p>}
         </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <Input
-          label={t('profile.firstName')}
-          value={profile.firstName}
-          onChange={(e) => updateProfile({ firstName: e.target.value })}
-        />
-        <Input
-          label={t('profile.lastName')}
-          value={profile.lastName}
-          onChange={(e) => updateProfile({ lastName: e.target.value })}
-        />
-      </div>
-      <Input
-        label={t('profile.location')}
-        value={profile.location}
-        onChange={(e) => updateProfile({ location: e.target.value })}
-      />
-      <Input
-        label={t('profile.photo')}
-        value={profile.photoUrl}
-        onChange={(e) => updateProfile({ photoUrl: e.target.value })}
-        placeholder="https://..."
-      />
+      ))}
     </div>
   );
 
-  // ─── INFO SECTION ───
   const InfoSection = () => {
-    const [selectedAttrKeys, setSelectedAttrKeys] = useState(new Set());
-    const { isOpen: isRemoveOpen, onOpen: onRemoveOpen, onClose: onRemoveClose } = useDisclosure();
-
-    const handleAddAttribute = async (attributeId) => {
-      const attr = availableAttributes.find(a => a.id === Number(attributeId));
-      if (!attr) return;
-      
-      updateProfile({
-        infoAttributes: [
-          ...profile.infoAttributes,
-          { ...attr, value: null }
-        ]
-      });
-    };
-
-    const handleRemoveAttributes = () => {
-      const idsToRemove = Array.from(selectedAttrKeys).map(Number);
-      updateProfile({
-        infoAttributes: profile.infoAttributes.filter(a => !idsToRemove.includes(a.id))
-      });
-      setSelectedAttrKeys(new Set());
-      onRemoveClose();
-    };
-
-    const handleValueChange = (attrId, value) => {
-      updateProfile({
-        infoAttributes: profile.infoAttributes.map(a =>
-          a.id === attrId ? { ...a, value } : a
-        )
-      });
-    };
-
-    const renderAttributeInput = (attr) => {
-      switch (attr.dataType) {
-        case 'string':
-          return (
-            <Input
-              value={attr.value || ''}
-              onChange={(e) => handleValueChange(attr.id, e.target.value)}
-              placeholder={attr.name}
-            />
-          );
-        case 'numeric':
-          return (
-            <Input
-              type="number"
-              value={attr.value || ''}
-              onChange={(e) => handleValueChange(attr.id, Number(e.target.value))}
-              placeholder={attr.name}
-            />
-          );
-        case 'boolean':
-          return (
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={!!attr.value}
-                onChange={(e) => handleValueChange(attr.id, e.target.checked)}
-                className="w-4 h-4"
-              />
-              <span>{attr.name}</span>
-            </div>
-          );
-        case 'dropdown':
-          return (
-            <select
-              value={attr.value || ''}
-              onChange={(e) => handleValueChange(attr.id, e.target.value)}
-              className="w-full p-2 rounded-lg border border-default-200 bg-background"
-            >
-              <option value="">Select...</option>
-              {/* Options would come from attribute definition */}
-            </select>
-          );
-        case 'date':
-          return (
-            <Input
-              type="date"
-              value={attr.value || ''}
-              onChange={(e) => handleValueChange(attr.id, e.target.value)}
-            />
-          );
-        default:
-          return <Input value={attr.value || ''} readOnly placeholder="Not supported yet" />;
-      }
-    };
-
-    const attrColumns = [
-      { key: 'name', label: t('attributes.name') },
-      { key: 'category', label: t('attributes.category') },
+    const columns = [
+      { key: 'attributeName', label: 'Name' },
+      { key: 'value', label: 'Value', renderCell: (item) => renderValueInput(item) },
       {
-        key: 'value',
-        label: 'Value',
-        renderCell: (item) => renderAttributeInput(item),
+        key: 'isFilled',
+        label: '',
+        renderCell: (item) => !item.isFilled && <Chip size="sm" color="danger" variant="flat">Empty</Chip>,
       },
     ];
 
     return (
       <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <select
-            onChange={(e) => handleAddAttribute(e.target.value)}
-            className="p-2 rounded-lg border border-default-200 bg-background"
-            value=""
-          >
-            <option value="">{t('profile.addAttribute')}</option>
-            {availableAttributes
-              .filter(a => !profile.infoAttributes.some(ia => ia.id === a.id))
-              .map(a => (
-                <option key={a.id} value={a.id}>{a.name} ({a.category})</option>
+        <div className="border border-default-300 bg-content1 rounded-xl p-4">
+          <label className="text-sm font-medium text-default-700 mb-2 block">Add an attribute to your profile</label>
+          <div className="flex gap-2">
+            <select
+              id="add-attribute-select"
+              className="flex-1 p-2 rounded-lg border border-default-300 bg-background text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none"
+              defaultValue=""
+            >
+              <option value="" disabled>Choose an attribute…</option>
+              {addableAttributes.map((a) => (
+                <option key={a.id} value={a.id}>{a.name}</option>
               ))}
-          </select>
+            </select>
+            <button
+              type="button"
+              className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => {
+                const select = document.getElementById('add-attribute-select');
+                if (select.value) {
+                  handleAddAttribute(select.value);
+                  select.value = '';
+                }
+              }}
+            >
+              Add
+            </button>
+          </div>
         </div>
 
-        <Toolbar
-          actions={[
-            {
-              label: t('profile.removeAttribute'),
-              icon: <TrashIcon className="w-4 h-4" />,
-              color: 'danger',
-              variant: 'flat',
-              requiresSelection: true,
-              onClick: onRemoveOpen,
-            },
-          ]}
-          selectedCount={selectedAttrKeys.size}
-        />
+        <div className="border-b border-default-200 pb-3">
+          <Toolbar
+            actions={[
+              {
+                label: 'Remove',
+                icon: <TrashIcon className="w-4 h-4" />,
+                color: 'danger',
+                variant: 'flat',
+                requiresSelection: true,
+                onClick: handleRemoveSelected,
+              },
+            ]}
+            selectedCount={selectedAttrKeys.size}
+          />
+        </div>
 
         <DataTable
-          columns={attrColumns}
-          data={profile.infoAttributes}
+          columns={columns}
+          data={infoAttributes}
+          keyField="attributeId"
           selectedKeys={selectedAttrKeys}
           onSelectionChange={setSelectedAttrKeys}
-          selectionMode="multiple"
-        />
-
-        <ConfirmDialog
-          isOpen={isRemoveOpen}
-          onClose={onRemoveClose}
-          onConfirm={handleRemoveAttributes}
-          title={t('profile.removeAttribute')}
-          message="Remove selected attributes?"
-          confirmColor="danger"
-        />
-      </div>
-    );
-  };
-
-  // ─── PROJECTS SECTION ───
-  const ProjectsSection = () => {
-    const { isOpen: isFormOpen, onOpen: onFormOpen, onClose: onFormClose } = useDisclosure();
-    const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
-
-    const handleSaveProject = (projectData) => {
-      if (editingProject) {
-        updateProfile({
-          projects: profile.projects.map(p =>
-            p.id === editingProject.id ? { ...projectData, id: p.id } : p
-          )
-        });
-      } else {
-        updateProfile({
-          projects: [...profile.projects, { ...projectData, id: Date.now() }]
-        });
-      }
-      setEditingProject(null);
-      onFormClose();
-    };
-
-    const handleDeleteProjects = () => {
-      const idsToRemove = Array.from(selectedProjectKeys).map(Number);
-      updateProfile({
-        projects: profile.projects.filter(p => !idsToRemove.includes(p.id))
-      });
-      setSelectedProjectKeys(new Set());
-      onDeleteClose();
-    };
-
-    const projectColumns = [
-      { key: 'name', label: t('profile.projectName') },
-      {
-        key: 'period',
-        label: t('profile.period'),
-        renderCell: (item) => `${item.startDate} - ${item.endDate || 'Present'}`,
-      },
-      {
-        key: 'tags',
-        label: t('profile.technologyTags'),
-        renderCell: (item) => (
-          <div className="flex gap-1 flex-wrap">
-            {item.tags.map(tag => (
-              <Chip key={tag} size="sm" variant="flat">{tag}</Chip>
-            ))}
-          </div>
-        ),
-      },
-    ];
-
-    return (
-      <div className="space-y-4">
-        <Toolbar
-          actions={[
-            {
-              label: t('common.edit'),
-              icon: <PencilIcon className="w-4 h-4" />,
-              color: 'secondary',
-              requiresSelection: true,
-              onClick: () => {
-                const id = Array.from(selectedProjectKeys)[0];
-                setEditingProject(profile.projects.find(p => p.id === Number(id)));
-                onFormOpen();
-              },
-            },
-            {
-              label: t('common.delete'),
-              icon: <TrashIcon className="w-4 h-4" />,
-              color: 'danger',
-              variant: 'flat',
-              requiresSelection: true,
-              onClick: onDeleteOpen,
-            },
-            {
-              label: t('profile.addProject'),
-              icon: <PlusIcon className="w-4 h-4" />,
-              color: 'primary',
-              requiresSelection: false,
-              onClick: () => {
-                setEditingProject(null);
-                onFormOpen();
-              },
-            },
-          ]}
-          selectedCount={selectedProjectKeys.size}
-        />
-
-        <DataTable
-          columns={projectColumns}
-          data={profile.projects}
-          selectedKeys={selectedProjectKeys}
-          onSelectionChange={setSelectedProjectKeys}
-          selectionMode="multiple"
-        />
-
-        {/* Project Form Modal */}
-        <ProjectFormModal
-          isOpen={isFormOpen}
-          onClose={onFormClose}
-          onSave={handleSaveProject}
-          initialData={editingProject}
-        />
-
-        <ConfirmDialog
-          isOpen={isDeleteOpen}
-          onClose={onDeleteClose}
-          onConfirm={handleDeleteProjects}
-          title={t('common.delete')}
-          message="Delete selected projects?"
-          confirmColor="danger"
-        />
-      </div>
-    );
-  };
-
-  // ─── CVs SECTION ───
-  const CVsSection = () => {
-    const cvColumns = [
-      { key: 'positionTitle', label: t('positions.title_col') },
-      {
-        key: 'status',
-        label: t('cvs.status'),
-        renderCell: (item) => (
-          <Chip color={item.isPublished ? 'success' : 'default'} size="sm">
-            {item.isPublished ? t('cvs.published') : t('cvs.draft')}
-          </Chip>
-        ),
-      },
-      { key: 'updatedAt', label: t('positions.updatedAt') },
-    ];
-
-    return (
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">{t('profile.cvs')}</h3>
-        <DataTable
-          columns={cvColumns}
-          data={profile.cvs}
-          emptyContent={t('cvs.noCvs')}
+          isLoading={isLoading}
+          removeWrapper
+          emptyContent="No attributes added yet. Use the picker above to add your first one."
         />
       </div>
     );
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{t('user.profile')}</h1>
-        <div className="flex items-center gap-2">
-          {isSaving && <Chip size="sm" color="warning">{t('profile.saving')}</Chip>}
-          {lastSaved && (
-            <Chip size="sm" color="success">
-              {t('profile.saved')} {lastSaved.toLocaleTimeString()}
-            </Chip>
-          )}
-          {conflict && (
-            <Chip size="sm" color="danger">
-              {t('profile.saveError')}
-            </Chip>
-          )}
-        </div>
-      </div>
+    <div className="max-w-4xl mx-auto space-y-6">
+      <h1 className="text-xl font-semibold">Profile</h1>
 
       <Tabs selectedKey={activeTab} onSelectionChange={setActiveTab}>
-        <Tab key="me" title={<div className="flex items-center gap-2"><UserIcon className="w-4 h-4" /> {t('profile.me')}</div>}>
+        <Tab key="me" title={<div className="flex items-center gap-2"><UserIcon className="w-4 h-4" /> Me</div>}>
           <Card><CardBody><MeSection /></CardBody></Card>
         </Tab>
-        <Tab key="info" title={<div className="flex items-center gap-2"><InformationCircleIcon className="w-4 h-4" /> {t('profile.info')}</div>}>
+        <Tab key="info" title={<div className="flex items-center gap-2"><InformationCircleIcon className="w-4 h-4" /> Info</div>}>
           <Card><CardBody><InfoSection /></CardBody></Card>
-        </Tab>
-        <Tab key="projects" title={<div className="flex items-center gap-2"><FolderIcon className="w-4 h-4" /> {t('profile.projects')}</div>}>
-          <Card><CardBody><ProjectsSection /></CardBody></Card>
-        </Tab>
-        <Tab key="cvs" title={<div className="flex items-center gap-2"><DocumentTextIcon className="w-4 h-4" /> {t('profile.cvs')}</div>}>
-          <Card><CardBody><CVsSection /></CardBody></Card>
         </Tab>
       </Tabs>
     </div>
-  );
-}
-
-// Project Form Modal Component
-function ProjectFormModal({ isOpen, onClose, onSave, initialData }) {
-  const { t } = useTranslation();
-  const [formData, setFormData] = useState({
-    name: '',
-    startDate: '',
-    endDate: '',
-    description: '',
-    tags: [],
-  });
-
-  useEffect(() => {
-    if (initialData) {
-      setFormData(initialData);
-    } else {
-      setFormData({ name: '', startDate: '', endDate: '', description: '', tags: [] });
-    }
-  }, [initialData, isOpen]);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSave(formData);
-  };
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} size="2xl">
-      <ModalContent>
-        <form onSubmit={handleSubmit}>
-          <ModalHeader>
-            {initialData ? t('profile.editProject') : t('profile.addProject')}
-          </ModalHeader>
-          <ModalBody className="gap-4">
-            <Input
-              label={t('profile.projectName')}
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
-            />
-            <div className="flex gap-2">
-              <Input
-                type="date"
-                label="Start Date"
-                value={formData.startDate}
-                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-              />
-              <Input
-                type="date"
-                label="End Date"
-                value={formData.endDate}
-                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-              />
-            </div>
-            <MarkdownEditor
-              value={formData.description}
-              onChange={(value) => setFormData({ ...formData, description: value })}
-              placeholder={t('profile.projectDescription')}
-            />
-            <TagInput
-              tags={formData.tags}
-              onChange={(tags) => setFormData({ ...formData, tags })}
-              placeholder="React, TypeScript, Node.js..."
-            />
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="flat" onPress={onClose}>{t('common.cancel')}</Button>
-            <Button type="submit" color="primary">{t('common.save')}</Button>
-          </ModalFooter>
-        </form>
-      </ModalContent>
-    </Modal>
   );
 }
