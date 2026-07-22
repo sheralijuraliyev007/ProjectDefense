@@ -9,7 +9,6 @@ create table info.info_rule(
     modified_date_time  timestamptz null
 );
 
-insert into info.info_table(code, name) values (7, 'info_rule');
 
 insert into info.info_rule(code, name) values
 (1,'Greater than'),

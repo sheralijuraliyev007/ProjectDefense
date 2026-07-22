@@ -11,10 +11,6 @@ create table info.info_role(
 
 
 
-insert into info.info_table (code,name)
-values (3,'info_role');
-
-
 insert into info.info_role(code, name) values
 (1, 'Candidate'),
 (2, 'Recruiter'),

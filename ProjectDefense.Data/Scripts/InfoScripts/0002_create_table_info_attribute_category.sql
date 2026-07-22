@@ -10,10 +10,6 @@ create table info.info_attribute_category(
 );
 
 
-
-insert into info.info_table(code, name)
-values(1, 'info_attribute_category');
-
 insert into info.info_attribute_category(code, name) 
 values
 (1, 'Certification'),

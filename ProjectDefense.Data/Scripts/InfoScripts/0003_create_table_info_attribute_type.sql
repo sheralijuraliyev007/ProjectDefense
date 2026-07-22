@@ -10,12 +10,6 @@ create table info.info_attribute_type(
 );
 
 
-
-
-insert into info.info_table(code, name)
-values(2,'info_attribute_type')
-
-
 insert into info.info_attribute_type(code, name) values
 (1, 'String'),
 (2, 'Text'),
