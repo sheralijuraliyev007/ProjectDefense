@@ -16,7 +16,7 @@ import VerifyEmailPage from './pages/auth/VerifyEmailPage';
 
 // Candidate pages
 import ProfilePage from './pages/candidate/ProfilePage';
-import CVEditPage from './pages/candidate/CVEditPage';
+
 
 // Recruiter pages
 import PositionsPage from './pages/recruiter/PositionsPage';
@@ -55,11 +55,7 @@ const router = createBrowserRouter([
           { index: true, element: <ProfilePage /> },
         ]
       },
-      {
-        path: 'cvs/:id/edit',
-        element: <ProtectedRoute allowedRoles={['Candidate', 'Administrator']} />,
-        children: [{ index: true, element: <CVEditPage /> }]
-      },
+      
       
       
       {

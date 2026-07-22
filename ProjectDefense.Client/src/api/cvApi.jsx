@@ -9,5 +9,5 @@ export default {
   publish: (id) => api.post(`/cv/${id}/publish`),
   getAttributes: (id) => api.get(`/cv/${id}/attributes`),
   like: (id) => api.post(`/cv/${id}/like`),
-unlike: (id) => api.delete(`/cv/${id}/like`),
+  unlike: (id) => api.delete(`/cv/${id}/like`),
 };
