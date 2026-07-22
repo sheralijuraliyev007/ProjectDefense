@@ -21,7 +21,6 @@ import CVEditPage from './pages/candidate/CVEditPage';
 // Recruiter pages
 import PositionsPage from './pages/recruiter/PositionsPage';
 import PositionDetailPage from './pages/recruiter/PositionDetailPage';
-import CVViewPage from './pages/recruiter/CVViewPage';
 import AttributeLibraryPage from './pages/recruiter/AttributeLibraryPage';
 
 // Admin pages
@@ -71,11 +70,6 @@ const router = createBrowserRouter([
           { path: 'positions/:id', element: <PositionDetailPage /> },
           { path: 'attributes', element: <AttributeLibraryPage /> },
         ]
-      },
-      {
-        path: 'cvs/:id',
-        element: <ProtectedRoute allowedRoles={['Recruiter', 'Administrator']} />,
-        children: [{ index: true, element: <CVViewPage /> }]
       },
       
       
