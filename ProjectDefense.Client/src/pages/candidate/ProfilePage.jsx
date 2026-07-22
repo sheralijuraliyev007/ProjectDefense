@@ -338,7 +338,9 @@ export default function ProfilePage() {
         );
       }
       case DTYPE.PERIOD: {
-  const period = currentValue; // { start, end }
+  const pending = dirtyRef.current.get(attr.attributeId)?.rawValue;
+  const period = pending ?? currentValue; // prefer whatever's already staged, not just server value
+
   return (
     <div className="flex gap-2 items-center">
       <Input
@@ -348,7 +350,10 @@ export default function ProfilePage() {
         variant="bordered"
         classNames={{ inputWrapper: inputClasses }}
         defaultValue={period.start}
-        onChange={(e) => markDirty(attr, { ...period, start: e.target.value })}
+        onChange={(e) => {
+          const latest = dirtyRef.current.get(attr.attributeId)?.rawValue ?? period;
+          markDirty(attr, { ...latest, start: e.target.value });
+        }}
       />
       <span className="text-default-400 text-sm">to</span>
       <Input
@@ -358,7 +363,10 @@ export default function ProfilePage() {
         variant="bordered"
         classNames={{ inputWrapper: inputClasses }}
         defaultValue={period.end}
-        onChange={(e) => markDirty(attr, { ...period, end: e.target.value })}
+        onChange={(e) => {
+          const latest = dirtyRef.current.get(attr.attributeId)?.rawValue ?? period;
+          markDirty(attr, { ...latest, end: e.target.value });
+        }}
       />
       {isSaving && <Spinner size="sm" />}
       {hasConflict && <ConflictNote />}
