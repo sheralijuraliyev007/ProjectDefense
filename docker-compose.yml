@@ -4,7 +4,24 @@ services:
       context: .
       dockerfile: ProjectDefense.Api/Dockerfile
     ports:
-      - "8080:8080"
+      - "5109:8080"
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      - JwtSettings__Key=${JWT_KEY}
+      - JwtSettings__Issuer=ProjectDefense
+      - JwtSettings__Audience=ProjectDefenseUsers
+      - CloudinarySettings__CloudName=${CLOUDINARY_CLOUD_NAME}
+      - CloudinarySettings__ApiKey=${CLOUDINARY_API_KEY}
+      - CloudinarySettings__ApiSecret=${CLOUDINARY_API_SECRET}
+      - Authentication__Google__ClientId=${GOOGLE_CLIENT_ID}
+      - Authentication__GitHub__ClientId=${GITHUB_CLIENT_ID}
+      - Authentication__GitHub__ClientSecret=${GITHUB_CLIENT_SECRET}
+      - EmailSettings__Username=${MAILJET_USERNAME}
+      - EmailSettings__Password=${MAILJET_PASSWORD}
+      - EmailSettings__SmtpServer=in-v3.mailjet.com
+      - EmailSettings__Port=587
+      - EmailSettings__From=noreply@bookswapper.cc
+      - EmailSettings__AppBaseUrl=http://82.208.22.154:3000
     env_file:
       - .env
     depends_on:
