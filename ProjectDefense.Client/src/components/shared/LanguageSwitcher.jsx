@@ -18,6 +18,7 @@ export default function LanguageSwitcher() {
         </Button>
       </DropdownTrigger>
       <DropdownMenu
+        selectionMode="single"
         selectedKeys={[i18n.language]}
         onSelectionChange={(keys) => {
           const selected = Array.from(keys)[0];
