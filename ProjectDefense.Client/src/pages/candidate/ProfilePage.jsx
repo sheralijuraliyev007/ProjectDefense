@@ -24,6 +24,8 @@ function buildValuePayload(attributeId, dtypeCode, rawValue, version) {
       return { ...base, valueDate: rawValue || null };
     case DTYPE.BOOLEAN:
       return { ...base, valueBoolean: !!rawValue };
+    case DTYPE.PERIOD:
+      return { ...base, valuePeriodStart: rawValue?.start || null, valuePeriodEnd: rawValue?.end || null };
     case DTYPE.ONE_OF_MANY:
       return { ...base, valueOptionId: rawValue ? Number(rawValue) : null };
     case DTYPE.IMAGE:
@@ -42,6 +44,11 @@ function readValue(attr) {
       return attr.valueNumeric ?? '';
     case DTYPE.DATE:
       return attr.valueDate ? attr.valueDate.slice(0, 10) : '';
+    case DTYPE.PERIOD:
+      return {
+        start: attr.valuePeriodStart ? attr.valuePeriodStart.slice(0, 10) : '',
+        end: attr.valuePeriodEnd ? attr.valuePeriodEnd.slice(0, 10) : '',
+      };
     case DTYPE.BOOLEAN:
       return !!attr.valueBoolean;
     case DTYPE.ONE_OF_MANY:
@@ -71,7 +78,7 @@ export default function ProfilePage() {
   const [selectedAttrKeys, setSelectedAttrKeys] = useState(new Set());
   const [imageErrors, setImageErrors] = useState({}); // attributeId -> error message
 
-  // attributeId -> { attr, rawValue } — tracks unsaved edits between auto-save ticks
+
   const dirtyRef = useRef(new Map());
 
   const loadMyAttributes = useCallback(async () => {
@@ -330,6 +337,34 @@ export default function ProfilePage() {
           </div>
         );
       }
+      case DTYPE.PERIOD: {
+  const period = currentValue; // { start, end }
+  return (
+    <div className="flex gap-2 items-center">
+      <Input
+        key={`${attr.attributeId}-${attr.version}-start`}
+        type="date"
+        size="sm"
+        variant="bordered"
+        classNames={{ inputWrapper: inputClasses }}
+        defaultValue={period.start}
+        onChange={(e) => markDirty(attr, { ...period, start: e.target.value })}
+      />
+      <span className="text-default-400 text-sm">to</span>
+      <Input
+        key={`${attr.attributeId}-${attr.version}-end`}
+        type="date"
+        size="sm"
+        variant="bordered"
+        classNames={{ inputWrapper: inputClasses }}
+        defaultValue={period.end}
+        onChange={(e) => markDirty(attr, { ...period, end: e.target.value })}
+      />
+      {isSaving && <Spinner size="sm" />}
+      {hasConflict && <ConflictNote />}
+    </div>
+  );
+}
       default:
         return (
           <div>

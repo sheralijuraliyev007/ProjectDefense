@@ -13,5 +13,3 @@ create table info.info_common_status(
 insert into info.info_common_status(code, name) values
 (1, 'Active'),
 (2, 'Deleted');
-
-
