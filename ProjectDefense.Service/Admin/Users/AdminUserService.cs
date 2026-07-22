@@ -61,6 +61,8 @@ namespace ProjectDefense.Service.Admin.Users
 
         public async Task<IStatusGeneric> RemoveRoleAsync(List<Guid> userIds, short roleCode)
         {
+
+            if (IncludesSelf(userIds)) { AddError("You can't delete youself"); return this; }
             var toRemove = await unitOfWork.UserRoleRepository().GetAll()
                 .Where(ur => userIds.Contains(ur.UserId) && ur.RoleCode == roleCode)
                 .ToListAsync();
