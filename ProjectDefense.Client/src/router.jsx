@@ -16,7 +16,6 @@ import VerifyEmailPage from './pages/auth/VerifyEmailPage';
 
 // Candidate pages
 import ProfilePage from './pages/candidate/ProfilePage';
-import MyCVsPage from './pages/candidate/MyCVsPage';
 import CVEditPage from './pages/candidate/CVEditPage';
 
 // Recruiter pages
@@ -55,7 +54,6 @@ const router = createBrowserRouter([
         element: <ProtectedRoute allowedRoles={['Candidate', 'Administrator']} />,
         children: [
           { index: true, element: <ProfilePage /> },
-          { path: 'cvs', element: <MyCVsPage /> },
         ]
       },
       {
@@ -82,13 +80,14 @@ const router = createBrowserRouter([
       
       
       {
-        path: 'admin',
-        element: <ProtectedRoute allowedRoles={['Administrator']} />,
-        children: [
-          { path: 'users', element: <UsersPage /> },
-          { path: 'dashboard', element: <DashboardPage /> },
-        ]
-      },
+  path: 'admin',
+  element: <ProtectedRoute allowedRoles={['Administrator']} />,
+  children: [
+    { path: 'users', element: <UsersPage /> },
+    { path: 'users/:userId/profile', element: <ProfilePage /> },   // NEW
+    { path: 'dashboard', element: <DashboardPage /> },
+  ]
+},
       
       { path: '*', element: <NotFoundPage /> },
     ]

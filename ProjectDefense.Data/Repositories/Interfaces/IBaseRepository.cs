@@ -10,16 +10,11 @@ namespace ProjectDefense.Data.Repositories.Interfaces
         Task<T?> GetById<TK>(TK id);
 
         Task Add(T entity);
-
         Task Update(T entity);
-
         void Delete(T entity);
-
         void AddRange(List<T> entities);
         void UpdateRange(List<T> entities);
         void DeleteRange(List<T> entities);
-
         Task SaveChanges();
-
     }
 }

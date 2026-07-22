@@ -45,5 +45,7 @@ namespace ProjectDefense.Data.Entities.MainEntities
         [Column("version")]
         public int Version { get; set; } = 1;
 
+        public virtual ICollection<AttributeOption> Options { get; set; } = new List<AttributeOption>();
+
     }
 }

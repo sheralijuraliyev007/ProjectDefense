@@ -13,9 +13,9 @@ namespace ProjectDefense.Api.Controllers
     public class UserAttributeController(IUserAttributeService service) : ControllerBase
     {
         [HttpGet]
-        public async Task<IActionResult> GetMine()
+        public async Task<IActionResult> GetMine([FromQuery] Guid? targetUserId)
         {
-            var result = await service.GetMyAttributesAsync();
+            var result = await service.GetAttributesAsync(targetUserId);
             return service.IsValid
                 ? Ok(new ApiResponse<List<UserAttributeDto>> { Data = result })
                 : BadRequest(service.Errors);

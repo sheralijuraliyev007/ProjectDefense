@@ -1,7 +1,7 @@
 import api from './axiosConfig';
 
 export default {
-  getMine: () => api.get('/UserAttribute'),
+  getMine: (targetUserId) => api.get('/UserAttribute', { params: targetUserId ? { targetUserId } : {} }),
   add: (attributeId, targetUserId) =>
     api.post(`/UserAttribute/${attributeId}`, null, { params: targetUserId ? { targetUserId } : {} }),
   remove: (attributeId, targetUserId) =>

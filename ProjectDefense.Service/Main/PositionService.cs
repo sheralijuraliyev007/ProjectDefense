@@ -19,7 +19,8 @@ namespace ProjectDefense.Service.Main
     IUnitOfWork unitOfWork,
     IUserHelper userHelper,
     ITagService tagService,
-    IPositionAccessService positionAccessService)
+    IPositionAccessService positionAccessService,
+    IAttributeService attributeService)
     : BaseMainService<Position, PositionFilterOptions, PositionDto, PositionCreateModel, PositionUpdateModel>(repository, userHelper), IPositionService
     {
 
@@ -55,6 +56,27 @@ namespace ProjectDefense.Service.Main
             return id;
         }
 
+        public override async Task<PositionDto?> GetByIdAsync<TId>(TId id)
+        {
+            var dto = await base.GetByIdAsync<TId>(id);
+            if (dto == null) return null;
+
+            if (dto.IsPublic) return dto; // public positions are visible to everyone, logged in or not
+
+            var userId = _userHelper.GetUserId();
+            if (userId == null) { AddError("Not found"); return null; }
+
+            if (await IsRecruiterOrAdmin(userId.Value)) return dto;
+
+            var positionId = Convert.ToInt32(id);
+            if (!await positionAccessService.CanAccessAsync(positionId, userId.Value))
+            {
+                AddError("Not found");
+                return null;
+            }
+
+            return dto;
+        }
         public async Task<IStatusGeneric> SetAttributesAsync(int positionId, List<int> attributeIds)
         {
             if (!await EnsureCanManage(positionId)) return this;
@@ -103,6 +125,16 @@ namespace ProjectDefense.Service.Main
             return copy.Id;
         }
 
+
+        public async Task<List<AttributeDto>> GetAttributesAsync(int positionId)
+        {
+            var attributeIds = await unitOfWork.PositionAttributeRepository().GetAll()
+                .Where(pa => pa.PositionId == positionId)
+                .Select(pa => pa.AttributeId)
+                .ToListAsync();
+
+            return await attributeService.GetByIdsAsync(attributeIds);
+        }
         public override async Task<PaginationModel<PositionDto>> GetAllAsync(PositionFilterOptions filterOptions)
         {
             var page = await base.GetAllAsync(filterOptions);

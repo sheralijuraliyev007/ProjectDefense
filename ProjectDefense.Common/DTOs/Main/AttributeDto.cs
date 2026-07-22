@@ -11,6 +11,7 @@
         public string CategoryName { get; set; } = string.Empty;
         public bool IsRemovable { get; set; }
         public int Version { get; set; }
-        public List<string> Options { get; set; } = [];
+        public List<AttributeOptionDto> Options { get; set; } = [];
+
     }
 }

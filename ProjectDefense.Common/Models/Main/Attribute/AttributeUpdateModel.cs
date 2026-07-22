@@ -1,10 +1,4 @@
 ﻿using ProjectDefense.Data.Entities.BaseEntities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace ProjectDefense.Common.Models.Main.Attribute
 {
     public class AttributeUpdateModel : IHasVersion
@@ -13,5 +7,6 @@ namespace ProjectDefense.Common.Models.Main.Attribute
         public required string Description { get; set; }
         public required short CategoryCode { get; set; }
         public required int Version { get; set; }
+        public List<string>? Options { get; set; }
     }
 }

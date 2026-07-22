@@ -31,6 +31,8 @@ namespace ProjectDefense.Data.Repositories.Interfaces
         IBaseRepository<UserRole> UserRoleRepository();
         IBaseRepository<DiscussionMessage> DiscussionMessageRepository();
 
+        IBaseRepository<CvProject> CvProjectRepository();
+
         IBaseRepository<PositionRule> PositionRuleRepository();
         Task SaveChanges();
         IDbContextTransaction BeginTransaction();

@@ -7,7 +7,6 @@ using ProjectDefense.Service.Main.Interfaces;
 
 namespace ProjectDefense.Api.Controllers
 {
-
     public class PositionController(IPositionService service)
         : BaseMainController<IPositionService, PositionFilterOptions, PositionDto, PositionCreateModel, PositionUpdateModel>(service)
     {
@@ -30,6 +29,12 @@ namespace ProjectDefense.Api.Controllers
         {
             var newId = await service.DuplicateAsync(id);
             return service.IsValid ? Ok(new ApiResponse<int?> { Data = newId }) : BadRequest(service.Errors);
+        }
+        [HttpGet("{id:int}/attributes")]
+        public async Task<IActionResult> GetAttributes(int id)
+        {
+            var result = await service.GetAttributesAsync(id);
+            return Ok(new ApiResponse<List<AttributeDto>> { Data = result });
         }
     }
 }

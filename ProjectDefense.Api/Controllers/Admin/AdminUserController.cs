@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ProjectDefense.Common.Constants;
+using ProjectDefense.Common.DTOs.Main;
 using ProjectDefense.Common.DTOs.User;
 using ProjectDefense.Common.FilterOptions;
 using ProjectDefense.Common.Models.Shared;
+using ProjectDefense.Data.Repositories;
 using ProjectDefense.Service.Admin.Users.Interfaces;
 
 namespace ProjectDefense.Api.Controllers.Admin
@@ -61,5 +63,7 @@ namespace ProjectDefense.Api.Controllers.Admin
             var result = await service.RemoveRoleAsync(userIds, roleCode);
             return result.IsValid ? Ok(new ApiResponse<string> { Data = "Role removed." }) : BadRequest(result.Errors);
         }
+
+        
     }
 }

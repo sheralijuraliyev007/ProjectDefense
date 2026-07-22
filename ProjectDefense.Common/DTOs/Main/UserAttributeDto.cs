@@ -17,6 +17,7 @@
         public long? ValueContentId { get; set; }
         public int Version { get; set; }
         public bool IsFilled { get; set; }
+        public string? ValueContentUrl { get; set; }
         public bool IsRemovable { get; set; }
     }
 }

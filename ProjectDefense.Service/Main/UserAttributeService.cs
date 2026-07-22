@@ -54,17 +54,21 @@ namespace ProjectDefense.Service.Main
             return this;
         }
 
-        public async Task<List<UserAttributeDto>> GetMyAttributesAsync()
+        public async Task<List<UserAttributeDto>> GetAttributesAsync(Guid? targetUserId = null)
         {
-            var userId = userHelper.GetUserId();
-            if (userId == null)
+            var callerId = userHelper.GetUserId();
+            if (callerId == null) { AddError("You are not logged in"); return []; }
+
+            var ownerId = targetUserId ?? callerId.Value;
+            if (ownerId != callerId && !await IsAdministrator(callerId.Value))
             {
-                AddError("You are not logged in");
+                AddError("You're not allowed to view this profile.");
                 return [];
             }
 
-            var rows = await unitOfWork.UserAttributeRepository().GetAll(ua => ua.Attribute!, ua => ua.ValueOption!)
-                .Where(ua => ua.UserId == userId)
+            var rows = await unitOfWork.UserAttributeRepository()
+                .GetAll(ua => ua.Attribute!, ua => ua.ValueOption!, ua => ua.ValueContent!)
+                .Where(ua => ua.UserId == ownerId)
                 .ToListAsync();
 
             return rows.Select(ToDto).ToList();
@@ -213,6 +217,7 @@ namespace ProjectDefense.Service.Main
             ValueBoolean = ua.ValueBoolean,
             ValueOptionId = ua.ValueOptionId,
             ValueOptionLabel = ua.ValueOption?.Label,
+            ValueContentUrl = ua.ValueContent?.SecureUrl,
             ValueContentId = ua.ValueContentId,
             IsFilled = ua.ValueGeneric != null || ua.ValueNumeric != null || ua.ValueDate != null
                || ua.ValueBoolean != null || ua.ValueOptionId != null || ua.ValueContentId != null,

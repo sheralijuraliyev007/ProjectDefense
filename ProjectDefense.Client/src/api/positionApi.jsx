@@ -12,6 +12,7 @@ export default {
     api.put(`/position/${id}/project-tags`, tagLabels),
   duplicate: (id) => api.post(`/position/${id}/duplicate`),
   getDiscussion: (id) => api.get(`/position/${id}/discussion`),
+  getAttributes: (id) => api.get(`/position/${id}/attributes`),
 addPost: (id, data) => api.post(`/position/${id}/discussion`, data),
 
 };

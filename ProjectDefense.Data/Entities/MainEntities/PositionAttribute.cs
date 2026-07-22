@@ -1,5 +1,4 @@
-﻿
-using ProjectDefense.Data.Entities.BaseEntities;
+﻿using ProjectDefense.Data.Entities.BaseEntities;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 

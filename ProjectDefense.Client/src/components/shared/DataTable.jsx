@@ -61,26 +61,38 @@ export default function DataTable({
         )}
       </TableHeader>
       <TableBody
-        items={data}
-        emptyContent={emptyContent || 'No data found'}
-        isLoading={isLoading}
-        loadingContent={<Spinner />}
-      >
-        {(item) => (
-          <TableRow
-            key={item[keyField]}
-            className="data-table-row cursor-pointer"
-            onMouseEnter={() => setHoveredRow(item[keyField])}
-            onMouseLeave={() => setHoveredRow(null)}
-          >
-            {(columnKey) => (
-              <TableCell>
-                {renderCell(item, columnKey)}
-              </TableCell>
-            )}
-          </TableRow>
-        )}
-      </TableBody>
+  items={data}
+  emptyContent={emptyContent || 'No data found'}
+  isLoading={isLoading}
+  loadingContent={<Spinner />}
+>
+  {(item) => (
+    <TableRow
+      key={item[keyField]}
+      className="data-table-row cursor-pointer"
+      onMouseEnter={() => setHoveredRow(item[keyField])}
+      onMouseLeave={() => setHoveredRow(null)}
+    >
+      {(columnKey) => {
+        const column = columns.find((c) => c.key === columnKey);
+        const isInteractive = Boolean(column?.renderCell);
+        const stopRowSelection = isInteractive
+          ? {
+              onPointerDown: (e) => e.stopPropagation(),
+              onMouseDown: (e) => e.stopPropagation(),
+              onClick: (e) => e.stopPropagation(),
+            }
+          : {};
+
+        return (
+          <TableCell {...stopRowSelection}>
+            {renderCell(item, columnKey)}
+          </TableCell>
+        );
+      }}
+    </TableRow>
+  )}
+</TableBody>
     </Table>
   );
 }

@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Tabs, Tab, Card, CardBody, Input, Chip, Spinner } from '@heroui/react';
-import { UserIcon, InformationCircleIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { useParams } from 'react-router-dom';
+import { Tabs, Tab, Card, CardBody, Input, Chip, Spinner, Button } from '@heroui/react';
+import { UserIcon, InformationCircleIcon, TrashIcon, PhotoIcon } from '@heroicons/react/24/outline';
 import DataTable from '../../components/shared/DataTable';
 import Toolbar from '../../components/shared/Toolbar';
 import userAttributeApi from '../../api/userAttributeApi';
 import attributeApi from '../../api/attributeApi';
+import contentApi from '../../api/contentApi';
 
 const DTYPE = {
   STRING: 1, TEXT: 2, IMAGE: 3, NUMERIC: 4, DATE: 5, PERIOD: 6, BOOLEAN: 7, ONE_OF_MANY: 8,
@@ -24,6 +26,8 @@ function buildValuePayload(attributeId, dtypeCode, rawValue, version) {
       return { ...base, valueBoolean: !!rawValue };
     case DTYPE.ONE_OF_MANY:
       return { ...base, valueOptionId: rawValue ? Number(rawValue) : null };
+    case DTYPE.IMAGE:
+      return { ...base, valueContentId: rawValue ? Number(rawValue) : null };
     default:
       return base;
   }
@@ -42,6 +46,8 @@ function readValue(attr) {
       return !!attr.valueBoolean;
     case DTYPE.ONE_OF_MANY:
       return attr.valueOptionId ?? '';
+    case DTYPE.IMAGE:
+      return attr.valueContentId ?? '';
     default:
       return '';
   }
@@ -54,6 +60,8 @@ const ConflictNote = () => (
 );
 
 export default function ProfilePage() {
+  const { userId: targetUserId } = useParams(); // undefined on /profile, set on /admin/users/:userId/profile
+
   const [activeTab, setActiveTab] = useState('me');
   const [myAttributes, setMyAttributes] = useState([]);
   const [availableAttributes, setAvailableAttributes] = useState([]);
@@ -61,6 +69,7 @@ export default function ProfilePage() {
   const [savingIds, setSavingIds] = useState(new Set());
   const [conflictIds, setConflictIds] = useState(new Set());
   const [selectedAttrKeys, setSelectedAttrKeys] = useState(new Set());
+  const [imageErrors, setImageErrors] = useState({}); // attributeId -> error message
 
   // attributeId -> { attr, rawValue } — tracks unsaved edits between auto-save ticks
   const dirtyRef = useRef(new Map());
@@ -68,12 +77,12 @@ export default function ProfilePage() {
   const loadMyAttributes = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await userAttributeApi.getMine();
+      const res = await userAttributeApi.getMine(targetUserId);
       setMyAttributes(res.data.data ?? []);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [targetUserId]);
 
   const loadAvailableAttributes = useCallback(async () => {
     const res = await attributeApi.search({ page: 1, pageSize: 200 });
@@ -91,6 +100,13 @@ export default function ProfilePage() {
     () => availableAttributes.filter((a) => !myAttributes.some((m) => m.attributeId === a.id)),
     [availableAttributes, myAttributes]
   );
+
+  // Quick lookup: attributeId -> full attribute metadata (incl. options for One-of-Many)
+  const attributeMetaById = useMemo(() => {
+    const map = new Map();
+    availableAttributes.forEach((a) => map.set(a.id, a));
+    return map;
+  }, [availableAttributes]);
 
   // Records a local edit; nothing is sent to the server until the next auto-save tick.
   const markDirty = useCallback((attr, rawValue) => {
@@ -113,7 +129,7 @@ export default function ProfilePage() {
       setSavingIds((prev) => new Set(prev).add(attributeId));
       try {
         const payload = buildValuePayload(attributeId, attr.dtypeCode, rawValue, attr.version);
-        await userAttributeApi.setValue(payload);
+        await userAttributeApi.setValue(payload, targetUserId);
       } catch (err) {
         if (err.response?.status === 409) {
           setConflictIds((prev) => new Set(prev).add(attributeId));
@@ -127,7 +143,7 @@ export default function ProfilePage() {
       }
     }
     await loadMyAttributes(); // pulls fresh values + current versions
-  }, [loadMyAttributes]);
+  }, [loadMyAttributes, targetUserId]);
 
   useEffect(() => {
     const id = setInterval(flushDirty, AUTO_SAVE_INTERVAL_MS);
@@ -140,15 +156,74 @@ export default function ProfilePage() {
   const handleAddAttribute = async (attributeIdStr) => {
     const attributeId = Number(attributeIdStr);
     if (!attributeId) return;
-    await userAttributeApi.add(attributeId);
+    await userAttributeApi.add(attributeId, targetUserId);
     await loadMyAttributes();
   };
 
   const handleRemoveSelected = async () => {
     const ids = Array.from(selectedAttrKeys).map(Number);
-    await Promise.all(ids.map((id) => userAttributeApi.remove(id)));
+    await Promise.all(ids.map((id) => userAttributeApi.remove(id, targetUserId)));
     setSelectedAttrKeys(new Set());
     await loadMyAttributes();
+  };
+
+  // Image upload is a discrete action (not continuous typing), so it saves immediately
+  // rather than going through the dirty/auto-save batching used for text/number fields.
+  const handleImageUpload = async (attr, file) => {
+    if (!file) return;
+    const attributeId = attr.attributeId;
+    setImageErrors((prev) => ({ ...prev, [attributeId]: null }));
+    setSavingIds((prev) => new Set(prev).add(attributeId));
+
+    try {
+      // 1. Ask our backend for a signed upload signature
+      const sigRes = await contentApi.getUploadSignature();
+      const sig = sigRes.data.data; // { signature, timestamp, apiKey, cloudName, folder }
+
+      // 2. Upload the file directly to the cloud provider
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('api_key', sig.apiKey);
+      formData.append('timestamp', sig.timestamp);
+      formData.append('signature', sig.signature);
+      if (sig.folder) formData.append('folder', sig.folder);
+
+      const uploadRes = await fetch(
+        `https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`,
+        { method: 'POST', body: formData }
+      );
+      if (!uploadRes.ok) throw new Error('Upload to storage provider failed.');
+      const uploadJson = await uploadRes.json(); // { public_id, secure_url, ... }
+
+      // 3. Confirm with our backend so it persists a Content record
+      const confirmRes = await contentApi.confirmUpload({
+        publicId: uploadJson.public_id,
+        originalFilename: file.name,
+        mimeType: file.type,
+      });
+      const content = confirmRes.data.data; // ContentDto { id, secureUrl, width, height, sizeBytes }
+
+      // 4. Immediately persist the value on this attribute (with optimistic-lock version)
+      const payload = buildValuePayload(attributeId, DTYPE.IMAGE, content.id, attr.version);
+      await userAttributeApi.setValue(payload, targetUserId);
+      await loadMyAttributes();
+    } catch (err) {
+      if (err.response?.status === 409) {
+        setConflictIds((prev) => new Set(prev).add(attributeId));
+        await loadMyAttributes();
+      } else {
+        setImageErrors((prev) => ({
+          ...prev,
+          [attributeId]: err.message || 'Could not upload image.',
+        }));
+      }
+    } finally {
+      setSavingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(attributeId);
+        return next;
+      });
+    }
   };
 
   const renderValueInput = (attr) => {
@@ -206,24 +281,55 @@ export default function ProfilePage() {
             {hasConflict && <ConflictNote />}
           </div>
         );
-      case DTYPE.ONE_OF_MANY:
+      case DTYPE.ONE_OF_MANY: {
+        const meta = attributeMetaById.get(attr.attributeId);
+        const attrOptions = meta?.options ?? [];
         return (
-          <Input
-            key={`${attr.attributeId}-${attr.version}`}
-            size="sm"
-            variant="bordered"
-            classNames={{ inputWrapper: inputClasses }}
-            defaultValue={currentValue}
-            placeholder="Option id"
-            onChange={(e) => markDirty(attr, e.target.value)}
-          />
-        );
-      case DTYPE.IMAGE:
-        return (
-          <div className="border-2 border-dashed border-default-300 rounded-lg px-4 py-3 text-center text-default-400 text-sm">
-            Photo upload coming soon
+          <div>
+            <select
+              key={`${attr.attributeId}-${attr.version}`}
+              className="w-full p-2 rounded-lg border border-default-300 bg-background text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none"
+              defaultValue={currentValue}
+              onChange={(e) => markDirty(attr, e.target.value)}
+            >
+              <option value="">— Select —</option>
+              {attrOptions.map((opt) => (
+                <option key={opt.id} value={opt.id}>{opt.label}</option>
+              ))}
+            </select>
+            {isSaving && <Spinner size="sm" className="mt-1" />}
+            {hasConflict && <ConflictNote />}
           </div>
         );
+      }
+      case DTYPE.IMAGE: {
+        const hasImage = !!attr.valueContentId;
+        const imgError = imageErrors[attr.attributeId];
+        return (
+          <div className="space-y-2">
+            {hasImage && attr.valueContentUrl && (
+              <img
+                src={attr.valueContentUrl}
+                alt={attr.attributeName}
+                className="w-24 h-24 object-cover rounded-lg border border-default-300"
+              />
+            )}
+            <label className="flex items-center gap-2 border-2 border-dashed border-default-300 rounded-lg px-4 py-3 text-center text-default-500 text-sm cursor-pointer hover:border-primary/50 w-fit">
+              <PhotoIcon className="w-4 h-4" />
+              {hasImage ? 'Replace image' : 'Upload image'}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => handleImageUpload(attr, e.target.files?.[0])}
+              />
+              {isSaving && <Spinner size="sm" />}
+            </label>
+            {imgError && <p className="text-danger text-xs">{imgError}</p>}
+            {hasConflict && <ConflictNote />}
+          </div>
+        );
+      }
       default:
         return (
           <div>
@@ -333,6 +439,12 @@ export default function ProfilePage() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <h1 className="text-xl font-semibold">Profile</h1>
+
+      {targetUserId && (
+        <div className="bg-warning-50 border border-warning-200 text-warning-700 text-sm rounded-lg px-4 py-2">
+          You're editing another user's profile as an administrator.
+        </div>
+      )}
 
       <Tabs selectedKey={activeTab} onSelectionChange={setActiveTab}>
         <Tab key="me" title={<div className="flex items-center gap-2"><UserIcon className="w-4 h-4" /> Me</div>}>

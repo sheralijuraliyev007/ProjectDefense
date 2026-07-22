@@ -93,7 +93,7 @@ namespace ProjectDefense.Service.Main.Base
             var page = await query.ToPaginationModelAsync(filterOptions.Page, filterOptions.PageSize);
             return ToDtoPage(page);
         }
-        public async Task<IStatusGeneric> UpdateAsync<TId>(TId id, TUpdateModel updateModel)
+        public virtual async Task<IStatusGeneric> UpdateAsync<TId>(TId id, TUpdateModel updateModel)
         {
             var entity = await _repository.GetById(id);
             if(entity == null)

@@ -6,7 +6,6 @@ using ProjectDefense.Common.FilterOptions;
 using ProjectDefense.Common.Models.Main.Attribute;
 using ProjectDefense.Data.Entities.MainEntities;
 using ProjectDefense.Data.Repositories.Interfaces;
-
 using ProjectDefense.Service.Common.Interfaces;
 using ProjectDefense.Service.Main.Base;
 using ProjectDefense.Service.Main.Interfaces;
@@ -50,7 +49,7 @@ namespace ProjectDefense.Service.Main
             && (ur.RoleCode == RoleConstants.Recruiter || ur.RoleCode == RoleConstants.Administrator));
 
         protected override IQueryable<Data.Entities.MainEntities.Attribute> GetAllQuery() =>
-            _repository.GetAll(a => a.DType!, a => a.CategoryType!);
+            _repository.GetAll(a => a.DType!, a => a.CategoryType!, a=>a.Options);
 
         public async Task<List<AttributeDto>> SearchByPrefixAsync(string prefix, int limit = 10)
         {
@@ -90,6 +89,45 @@ namespace ProjectDefense.Service.Main
             }
 
             return await base.DeleteAsync(id);
+        }
+
+
+        public async Task<List<AttributeDto>> GetByIdsAsync(List<int> attributeIds)
+        {
+            var attributes = await _repository.GetAll(a => a.DType!, a => a.CategoryType!, a => a.Options)
+                .Where(a => attributeIds.Contains(a.Id))
+                .ToListAsync();
+
+            return attributes.MapToDtos<Data.Entities.MainEntities.Attribute, AttributeDto>();
+        }
+        public override async Task<IStatusGeneric> UpdateAsync<TId>(TId id, AttributeUpdateModel updateModel)
+        {
+            var result = await base.UpdateAsync(id, updateModel);
+            if (!result.IsValid) return result;
+
+            var entity = await _repository.GetById(id);
+            if (entity!.DtypeCode == AttributeDtypeConstants.OneOfMany && updateModel.Options != null)
+                await ReplaceOptions(Convert.ToInt32(id), updateModel.Options);
+
+            return result;
+        }
+
+        private async Task ReplaceOptions(int attributeId, List<string> labels)
+        {
+            var existing = await _optionsRepository.GetAll()
+                .Where(o => o.AttributeId == attributeId)
+                .ToListAsync();
+            _optionsRepository.DeleteRange(existing);
+
+            var options = labels.Select((label, i) => new AttributeOption
+            {
+                AttributeId = attributeId,
+                Label = label,
+                SortOrder = (short)i
+            }).ToList();
+            _optionsRepository.AddRange(options);
+
+            await _optionsRepository.SaveChanges();
         }
 
         private async Task SaveOptions(int attributeId, List<string> labels)

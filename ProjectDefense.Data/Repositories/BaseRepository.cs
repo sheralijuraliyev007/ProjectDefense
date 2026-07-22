@@ -52,12 +52,11 @@ namespace ProjectDefense.Data.Repositories
             return entity;
         }
 
+        
         public async Task SaveChanges() => await context.SaveChangesAsync();
 
         public async Task Update(T entity)
         {
-        //    if (entity is IHasCommonAttributes audit)
-        //        audit.ModifiedDateTime = DateTimeOffset.UtcNow;
 
             entity.ModifiedDateTime = DateTimeOffset.UtcNow;
 

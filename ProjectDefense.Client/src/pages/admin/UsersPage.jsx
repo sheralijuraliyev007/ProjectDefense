@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Chip, Avatar, Pagination } from '@heroui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
@@ -9,6 +10,7 @@ import {
   CheckCircleIcon,
   TrashIcon,
   UserGroupIcon,
+  IdentificationIcon,
 } from '@heroicons/react/24/outline';
 import DataTable from '../../components/shared/DataTable';
 import Toolbar from '../../components/shared/Toolbar';
@@ -36,6 +38,7 @@ function extractErrorMessage(err, fallback) {
 
 export default function UsersPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
@@ -94,10 +97,17 @@ export default function UsersPage() {
     runAction(() => userApi.assignRole(selectedIds, code));
   };
   const handleRemoveRole = (userId, roleName) => {
-  const code = getRoleCode(roleName);
-  if (code === undefined) return;
-  runAction(() => userApi.removeRole([userId], code));
-};
+    const code = getRoleCode(roleName);
+    if (code === undefined) return;
+    runAction(() => userApi.removeRole([userId], code));
+  };
+
+  // Takes the admin to a page for viewing/editing this one user's profile
+  // attributes (add/remove attributes, change values) — same underlying
+  // endpoints the candidate's own Profile page uses, just with ?targetUserId set.
+  const handleManageProfile = () => {
+    navigate(`/admin/users/${selectedIds[0]}/profile`);
+  };
 
   const columns = [
     {
@@ -114,56 +124,64 @@ export default function UsersPage() {
       ),
     },
     {
-  key: 'roles',
-  label: t('user.role'),
-  renderCell: (item) => (
-    <div className="flex gap-1.5 flex-wrap">
-      {item.roles?.map((role) => (
-        <span
-          key={role}
-          className={`inline-flex items-center gap-1 pl-2.5 pr-1 py-1 rounded-full text-xs font-medium ${roleStyles[role] || roleStyles.Candidate}`}
-        >
-          {role}
-          {role !== 'Candidate' && (
-            <button
-              type="button"
-              onClick={() => handleRemoveRole(item.id, role)}
-              className="rounded-full p-0.5 hover:bg-black/10 transition-colors"
-              aria-label={t('admin.removeRole', { role, defaultValue: `Remove ${role}` })}
+      key: 'roles',
+      label: t('user.role'),
+      renderCell: (item) => (
+        <div className="flex gap-1.5 flex-wrap">
+          {item.roles?.map((role) => (
+            <span
+              key={role}
+              className={`inline-flex items-center gap-1 pl-2.5 pr-1 py-1 rounded-full text-xs font-medium ${roleStyles[role] || roleStyles.Candidate}`}
             >
-              <XMarkIcon className="w-3 h-3" />
-            </button>
-          )}
-        </span>
-      ))}
-    </div>
-  ),
-},
+              {role}
+              {role !== 'Candidate' && (
+                <button
+                  type="button"
+                  onClick={() => handleRemoveRole(item.id, role)}
+                  className="rounded-full p-0.5 hover:bg-black/10 transition-colors"
+                  aria-label={t('admin.removeRole', { role, defaultValue: `Remove ${role}` })}
+                >
+                  <XMarkIcon className="w-3 h-3" />
+                </button>
+              )}
+            </span>
+          ))}
+        </div>
+      ),
+    },
     {
-  key: 'status',
-  label: t('user.status'),
-  renderCell: (item) => {
-    const isBlocked = item.statusName === 'Blocked';
-    return (
-      <Chip
-        size="sm"
-        color={isBlocked ? 'danger' : 'success'}
-        variant="flat"
-        startContent={isBlocked ? <NoSymbolIcon className="w-3 h-3" /> : <CheckCircleIcon className="w-3 h-3" />}
-      >
-        {isBlocked ? t('admin.blocked', 'Blocked') : t('admin.active', 'Active')}
-      </Chip>
-    );
-  },
-},
+      key: 'status',
+      label: t('user.status'),
+      renderCell: (item) => {
+        const isBlocked = item.statusName === 'Blocked';
+        return (
+          <Chip
+            size="sm"
+            color={isBlocked ? 'danger' : 'success'}
+            variant="flat"
+            startContent={isBlocked ? <NoSymbolIcon className="w-3 h-3" /> : <CheckCircleIcon className="w-3 h-3" />}
+          >
+            {isBlocked ? t('admin.blocked', 'Blocked') : t('admin.active', 'Active')}
+          </Chip>
+        );
+      },
+    },
     {
-  key: 'createdAt',
-  label: t('admin.registered', 'Registered'),
-  renderCell: (item) => new Date(item.createdDateTime).toLocaleDateString(),
-},
+      key: 'createdAt',
+      label: t('admin.registered', 'Registered'),
+      renderCell: (item) => new Date(item.createdDateTime).toLocaleDateString(),
+    },
   ];
 
   const toolbarActions = [
+    {
+      label: t('admin.manageProfile', 'Manage Profile'),
+      icon: <IdentificationIcon className="w-4 h-4" />,
+      color: 'primary',
+      requiresSelection: true,
+      isDisabled: selectedIds.length !== 1, // detail view — only makes sense for exactly one user
+      onClick: handleManageProfile,
+    },
     {
       label: t('admin.block'),
       icon: <NoSymbolIcon className="w-4 h-4" />,

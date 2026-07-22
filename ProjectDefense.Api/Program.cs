@@ -104,6 +104,7 @@ builder.Services.AddScoped<ILikeService, LikeService>();
 builder.Services.AddScoped<IDiscussionMessageService, DiscussionMessageService>();
 builder.Services.AddScoped<IPositionAccessService, PositionAccessService>();
 builder.Services.AddScoped<IContentService, ContentService>();
+builder.Services.AddScoped<IPositionRuleService, PositionRuleService>();
 //builder.Services.AddScoped<ISearchService, SearchService>();
 
 

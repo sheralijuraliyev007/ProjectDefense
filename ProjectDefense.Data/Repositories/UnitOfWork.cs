@@ -33,7 +33,8 @@ namespace ProjectDefense.Data.Repositories
         IBaseRepository<UserLike> userLikeRepository,
         IBaseRepository<UserRole> userRoleRepository,
         IBaseRepository<PositionRule> positionRuleRepository,
-        IBaseRepository<DiscussionMessage> discussionMessageRepository)
+        IBaseRepository<DiscussionMessage> discussionMessageRepository,
+        IBaseRepository<CvProject> cvProjectRepository)
         : IUnitOfWork
     {
         public IBaseRepository<AttributeCategory> AttributeCategoryRepository() =>
@@ -114,5 +115,8 @@ namespace ProjectDefense.Data.Repositories
 
         public IBaseRepository<PositionRule> PositionRuleRepository() =>
             positionRuleRepository ?? new BaseRepository<PositionRule>(context);
+
+        public IBaseRepository<CvProject> CvProjectRepository() =>
+            cvProjectRepository ?? new BaseRepository<CvProject>(context);
     }
 }

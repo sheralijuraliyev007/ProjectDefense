@@ -9,5 +9,7 @@ namespace ProjectDefense.Service.Main.Interfaces
     public interface IAttributeService : IMainServiceBase<AttributeFilterOptions, AttributeDto, AttributeCreateModel, AttributeUpdateModel>
     {
         Task<List<AttributeDto>> SearchByPrefixAsync(string prefix, int limit = 10);
+
+        Task<List<AttributeDto>> GetByIdsAsync(List<int> attributeIds);
     }
 }

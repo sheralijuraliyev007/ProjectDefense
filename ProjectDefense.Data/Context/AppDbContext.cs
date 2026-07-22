@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using ProjectDefense.Data.Entities.BaseEntities;
 using ProjectDefense.Data.Entities.InfoEntities;
 using ProjectDefense.Data.Entities.MainEntities;
 
@@ -20,6 +21,8 @@ namespace ProjectDefense.Data.Context
         public DbSet<AttributeOption> AttributeOptions { get; set; }
         public DbSet<Content> Contents { get; set; }
         public DbSet<CV> CVs { get; set; }
+
+        public DbSet<CvProject> CvProjects { get; set; }
         public DbSet<CVAttribute> CVAttributes { get; set; }
         public DbSet<Position> Positions { get; set; }
         public DbSet<PositionAttribute> PositionAttributes { get; set; }
@@ -52,8 +55,40 @@ namespace ProjectDefense.Data.Context
 
             modelBuilder.Entity<UserLike>()
                 .HasKey(ul => new { ul.UserId, ul.CVId });
+
+            modelBuilder.Entity<CvProject>()
+                .HasKey(cp => new { cp.CvId, cp.ProjectId });
+
+
+            modelBuilder.Entity<CV>()
+                .HasIndex(cv => new { cv.PositionId, cv.UserId })
+                .IsUnique();
+
+            modelBuilder.Entity<UserAttribute>()
+                .HasIndex(ua => new { ua.UserId, ua.AttributeId })
+                .IsUnique();
+
+            modelBuilder.Entity<Data.Entities.MainEntities.Attribute>()
+                .HasIndex(a => a.Name)
+                .IsUnique();
+
+            modelBuilder.Entity<Tag>()
+                .HasIndex(t => t.Label)
+                .IsUnique();
+
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+            {
+                if (typeof(IHasVersion).IsAssignableFrom(entityType.ClrType))
+                {
+                    modelBuilder.Entity(entityType.ClrType)
+                        .Property(nameof(IHasVersion.Version))
+                        .IsConcurrencyToken();
+                }
+            }
+
+            
         }
-        
+
 
     }
 }
