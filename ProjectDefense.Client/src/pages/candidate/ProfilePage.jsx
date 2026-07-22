@@ -274,20 +274,22 @@ export default function ProfilePage() {
           </div>
         );
       case DTYPE.DATE:
-        return (
-          <div>
-            <Input
-              key={`${attr.attributeId}-${attr.version}`}
-              type="date"
-              size="sm"
-              variant="bordered"
-              classNames={{ inputWrapper: inputClasses }}
-              defaultValue={currentValue}
-              onChange={(e) => markDirty(attr, e.target.value)}
-            />
-            {hasConflict && <ConflictNote />}
-          </div>
-        );
+  return (
+    <div>
+      <Input
+        key={`${attr.attributeId}-${attr.version}`}
+        type="date"
+        size="sm"
+        variant="bordered"
+        classNames={{ inputWrapper: inputClasses }}
+        defaultValue={currentValue}
+        onChange={(e) => {
+          if (e.target.value) markDirty(attr, e.target.value); // ignore incomplete typing
+        }}
+      />
+      {hasConflict && <ConflictNote />}
+    </div>
+  );
       case DTYPE.ONE_OF_MANY: {
         const meta = attributeMetaById.get(attr.attributeId);
         const attrOptions = meta?.options ?? [];
@@ -339,7 +341,7 @@ export default function ProfilePage() {
       }
       case DTYPE.PERIOD: {
   const pending = dirtyRef.current.get(attr.attributeId)?.rawValue;
-  const period = pending ?? currentValue; // prefer whatever's already staged, not just server value
+  const period = pending ?? currentValue;
 
   return (
     <div className="flex gap-2 items-center">
@@ -351,6 +353,7 @@ export default function ProfilePage() {
         classNames={{ inputWrapper: inputClasses }}
         defaultValue={period.start}
         onChange={(e) => {
+          if (!e.target.value) return; // ignore incomplete typing
           const latest = dirtyRef.current.get(attr.attributeId)?.rawValue ?? period;
           markDirty(attr, { ...latest, start: e.target.value });
         }}
@@ -364,6 +367,7 @@ export default function ProfilePage() {
         classNames={{ inputWrapper: inputClasses }}
         defaultValue={period.end}
         onChange={(e) => {
+          if (!e.target.value) return;
           const latest = dirtyRef.current.get(attr.attributeId)?.rawValue ?? period;
           markDirty(attr, { ...latest, end: e.target.value });
         }}
@@ -373,6 +377,7 @@ export default function ProfilePage() {
     </div>
   );
 }
+    
       default:
         return (
           <div>
