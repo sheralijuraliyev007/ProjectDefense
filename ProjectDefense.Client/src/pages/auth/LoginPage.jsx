@@ -149,6 +149,13 @@ export default function LoginPage() {
             {t('auth.welcomeBack', 'Sign in to continue to your profile.')}
           </p>
 
+          <div
+            className="text-xs rounded-lg px-3 py-2 mb-6"
+            style={{ backgroundColor: '#F3EEE3', color: '#6B5B3D', border: '1px solid #E3D6B8' }}
+          >
+            <strong>Demo admin account:</strong> ali00cjchch@gmail.com / Asd123_
+          </div>
+
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
             <Input
               {...register('email')}
