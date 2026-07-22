@@ -11,27 +11,35 @@ const DTYPE = {
   STRING: 1, TEXT: 2, IMAGE: 3, NUMERIC: 4, DATE: 5, PERIOD: 6, BOOLEAN: 7, ONE_OF_MANY: 8,
 };
 
-// Which operators make sense for which attribute type
-const OPERATORS_BY_DTYPE = {
-  [DTYPE.NUMERIC]: [
-    { code: 1, label: '>' }, { code: 2, label: '<' },
-    { code: 3, label: '≥' }, { code: 4, label: '≤' },
-    { code: 5, label: '=' }, { code: 6, label: '≠' },
-  ],
-  [DTYPE.DATE]: [
-    { code: 1, label: 'after' }, { code: 2, label: 'before' },
-    { code: 5, label: 'on' }, { code: 6, label: 'not on' },
-  ],
-  [DTYPE.BOOLEAN]: [
-    { code: 7, label: 'is true' }, { code: 8, label: 'is false' },
-  ],
-  [DTYPE.ONE_OF_MANY]: [
-    { code: 5, label: 'is' }, { code: 6, label: 'is not' },
-  ],
-};
+function getOperatorsByDtype(t) {
+  return {
+    [DTYPE.NUMERIC]: [
+      { code: 1, label: t('positions.operators.greaterThan') },
+      { code: 2, label: t('positions.operators.lessThan') },
+      { code: 3, label: t('positions.operators.greaterOrEqual') },
+      { code: 4, label: t('positions.operators.lessOrEqual') },
+      { code: 5, label: t('positions.operators.equal') },
+      { code: 6, label: t('positions.operators.notEqual') },
+    ],
+    [DTYPE.DATE]: [
+      { code: 1, label: t('positions.operators.after') },
+      { code: 2, label: t('positions.operators.before') },
+      { code: 5, label: t('positions.operators.on') },
+      { code: 6, label: t('positions.operators.notOn') },
+    ],
+    [DTYPE.BOOLEAN]: [
+      { code: 7, label: t('positions.operators.isTrue') },
+      { code: 8, label: t('positions.operators.isFalse') },
+    ],
+    [DTYPE.ONE_OF_MANY]: [
+      { code: 5, label: t('positions.operators.is') },
+      { code: 6, label: t('positions.operators.isNot') },
+    ],
+  };
+}
 
-function emptyRule(attributeId, dtypeCode) {
-  const firstOp = OPERATORS_BY_DTYPE[dtypeCode]?.[0]?.code ?? 5;
+function emptyRule(attributeId, dtypeCode, operatorsByDtype) {
+  const firstOp = operatorsByDtype[dtypeCode]?.[0]?.code ?? 5;
   return { attributeId, ruleCode: firstOp, valueNumeric: null, valueDate: null, valueBoolean: null, valueOptionId: null };
 }
 
@@ -39,6 +47,8 @@ export default function PositionDetailPage() {
   const { id } = useParams();
   const { t } = useTranslation();
   const navigate = useNavigate();
+
+  const operatorsByDtype = useMemo(() => getOperatorsByDtype(t), [t]);
 
   const [position, setPosition] = useState(null);
   const [positionAttributes, setPositionAttributes] = useState([]); // AttributeDto[]
@@ -72,11 +82,11 @@ export default function PositionDetailPage() {
         }))
       );
     } catch (err) {
-      setError('Could not load this position.');
+      setError(t('positions.loadError'));
     } finally {
       setIsLoading(false);
     }
-  }, [id]);
+  }, [id, t]);
 
   useEffect(() => {
     loadAll();
@@ -122,7 +132,7 @@ export default function PositionDetailPage() {
   const handleAddRule = (attributeId) => {
     const attr = attrById.get(attributeId);
     if (!attr) return;
-    setRules((prev) => [...prev, emptyRule(attributeId, attr.dtypeCode)]);
+    setRules((prev) => [...prev, emptyRule(attributeId, attr.dtypeCode, operatorsByDtype)]);
   };
 
   const updateRule = (index, patch) => {
@@ -148,7 +158,7 @@ export default function PositionDetailPage() {
       await positionRuleApi.setRules(id, payload);
       await loadAll();
     } catch (err) {
-      setError('Could not save access rules.');
+      setError(t('positions.saveRulesError'));
     } finally {
       setIsSavingRules(false);
     }
@@ -184,19 +194,19 @@ export default function PositionDetailPage() {
             value={rule.valueOptionId ?? ''}
             onChange={(e) => updateRule(index, { valueOptionId: e.target.value ? Number(e.target.value) : null })}
           >
-            <option value="">— choose —</option>
+            <option value="">{t('positions.choosePlaceholder')}</option>
             {(attr.options ?? []).map((opt) => (
               <option key={opt.id} value={opt.id}>{opt.label}</option>
             ))}
           </select>
         );
       default:
-        return <span className="text-danger text-xs">Unsupported for rules</span>;
+        return <span className="text-danger text-xs">{t('positions.unsupportedForRules')}</span>;
     }
   };
 
   if (isLoading) return <div className="flex justify-center p-12"><Spinner size="lg" /></div>;
-  if (!position) return <div className="p-6 text-default-500">{error || 'Position not found.'}</div>;
+  if (!position) return <div className="p-6 text-default-500">{error || t('positions.notFound')}</div>;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -219,17 +229,17 @@ export default function PositionDetailPage() {
         <CardBody>
           <p className="text-default-600">{position.shortDescription}</p>
           <p className="text-xs text-default-400 mt-2">
-            Basic info (title, description, public/restricted, max projects) is edited from the positions list.
+            {t('positions.basicInfoNotice')}
           </p>
         </CardBody>
       </Card>
 
       <Card>
         <CardBody className="space-y-4">
-          <h3 className="font-semibold">Required Attributes</h3>
+          <h3 className="font-semibold">{t('positions.requiredAttributes')}</h3>
           <div className="flex gap-2 flex-wrap">
             {positionAttributes.length === 0 && (
-              <p className="text-default-400 text-sm">No attributes added yet.</p>
+              <p className="text-default-400 text-sm">{t('positions.noAttributesYet')}</p>
             )}
             {positionAttributes.map((attr) => (
               <Chip
@@ -248,7 +258,7 @@ export default function PositionDetailPage() {
             defaultValue=""
             disabled={isSavingAttrs}
           >
-            <option value="">Add an attribute…</option>
+            <option value="">{t('positions.addAttributePlaceholder')}</option>
             {addableAttributes.map((a) => (
               <option key={a.id} value={a.id}>{a.name}</option>
             ))}
@@ -260,21 +270,20 @@ export default function PositionDetailPage() {
         <Card>
           <CardBody className="space-y-4">
             <div>
-              <h3 className="font-semibold">Access Rules</h3>
+              <h3 className="font-semibold">{t('positions.accessRulesTitle')}</h3>
               <p className="text-xs text-default-400">
-                A candidate must satisfy every rule below to see this restricted position.
-                Rules can only reference attributes already added above.
+                {t('positions.accessRulesHint')}
               </p>
             </div>
 
             {positionAttributes.length === 0 && (
-              <p className="text-default-400 text-sm">Add at least one attribute above before defining rules.</p>
+              <p className="text-default-400 text-sm">{t('positions.addAttributeFirst')}</p>
             )}
 
             <div className="space-y-2">
               {rules.map((rule, index) => {
                 const attr = attrById.get(rule.attributeId);
-                const ops = OPERATORS_BY_DTYPE[attr?.dtypeCode] ?? [];
+                const ops = operatorsByDtype[attr?.dtypeCode] ?? [];
                 return (
                   <div key={index} className="flex items-center gap-2 flex-wrap border border-default-200 rounded-lg p-2">
                     <span className="text-sm font-medium">{attr?.name ?? '—'}</span>
@@ -302,7 +311,7 @@ export default function PositionDetailPage() {
                 onChange={(e) => { handleAddRule(Number(e.target.value)); e.target.value = ''; }}
                 defaultValue=""
               >
-                <option value="">Add a rule for…</option>
+                <option value="">{t('positions.addRuleFor')}</option>
                 {positionAttributes.map((a) => (
                   <option key={a.id} value={a.id}>{a.name}</option>
                 ))}
@@ -313,7 +322,7 @@ export default function PositionDetailPage() {
 
             <div className="flex justify-end">
               <Button color="primary" isLoading={isSavingRules} onPress={handleSaveRules}>
-                Save rules
+                {t('positions.saveRules')}
               </Button>
             </div>
           </CardBody>

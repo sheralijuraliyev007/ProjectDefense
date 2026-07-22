@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Button, Input, Select, SelectItem, Switch, Chip, Pagination } from '@heroui/react';
+import { Button, Input, Switch, Chip, Pagination } from '@heroui/react';
 import { PencilIcon, TrashIcon, DocumentDuplicateIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,14 +18,11 @@ const positionSchema = z.object({
 });
 
 // Turns an axios error into a message worth showing the user.
-//
-// IMPORTANT: if err.response is missing entirely, the request never reached
-// the server (or never got a response back) — that's a network/CORS/wrong-port
-// problem, not something the user did wrong. We say so explicitly instead of
-// falling back to a generic "could not save" message that hides the real cause.
-function extractErrorMessage(err, fallback) {
+// If err.response is missing entirely, the request never reached the server —
+// that's a network/CORS/wrong-port problem, not something the user did wrong.
+function extractErrorMessage(err, fallback, t) {
   if (!err.response) {
-    return 'Could not reach the server. Check that the API is running and that the frontend is pointed at the right URL (see axiosConfig.js baseURL).';
+    return t('positions.networkError');
   }
 
   const errors = err.response.data?.errors ?? err.response.data;
@@ -128,17 +125,11 @@ export default function PositionsPage() {
       setSelectedKeys(new Set());
       fetchPositions();
     } catch (err) {
-      setFormError(extractErrorMessage(err, 'Could not save this position.'));
+      setFormError(extractErrorMessage(err, t('positions.saveError'), t));
     }
   };
 
   const handleDelete = async () => {
-    const message =
-      selectedIds.length > 1
-        ? `Delete ${selectedIds.length} positions?`
-        : t('positions.confirmDelete');
-    if (!window.confirm(message)) return;
-
     setDeleteError('');
     try {
       await Promise.all(selectedIds.map((id) => positionApi.delete(id)));
@@ -146,19 +137,14 @@ export default function PositionsPage() {
       clearForm();
       fetchPositions();
     } catch (err) {
-      setDeleteError(extractErrorMessage(err, 'Could not delete one or more positions.'));
+      setDeleteError(extractErrorMessage(err, t('positions.deleteError'), t));
     }
   };
 
   const handleDuplicate = async () => {
-    if (!window.confirm('Duplicate this position?')) return;
-
-    try {
-      await positionApi.duplicate(selectedIds[0]);
-      fetchPositions();
-    } finally {
-      setSelectedKeys(new Set());
-    }
+    await positionApi.duplicate(selectedIds[0]);
+    setSelectedKeys(new Set());
+    fetchPositions();
   };
 
   const columns = [
@@ -226,13 +212,13 @@ export default function PositionsPage() {
               {editingPosition ? editingPosition.title : t('positions.createNew')}
             </h2>
             <p className="text-xs text-default-500">
-              {editingPosition
-                ? 'Editing an existing position. Attributes, rules, and project tags are managed separately.'
-                : 'Basic info only — you can add attributes and rules after creating it.'}
+              {editingPosition ? t('positions.editingNotice') : t('positions.createNewHint')}
             </p>
           </div>
           {editingPosition && (
-            <Button size="sm" variant="flat" color="warning" onPress={clearForm}>Cancel edit</Button>
+            <Button size="sm" variant="flat" color="warning" onPress={clearForm}>
+              {t('positions.cancelEdit')}
+            </Button>
           )}
         </div>
 
@@ -240,8 +226,8 @@ export default function PositionsPage() {
           <Input
             {...register('title')}
             variant="bordered"
-            label="Title"
-            placeholder="e.g. Backend Developer"
+            label={t('positions.formTitle')}
+            placeholder={t('positions.titlePlaceholder')}
             isInvalid={!!errors.title}
             errorMessage={errors.title?.message}
           />
@@ -249,14 +235,14 @@ export default function PositionsPage() {
             {...register('maxProjects')}
             type="number"
             variant="bordered"
-            label="Max projects in generated CV"
+            label={t('positions.maxProjectsLabel')}
             isInvalid={!!errors.maxProjects}
             errorMessage={errors.maxProjects?.message}
           />
           <Input
             {...register('shortDescription')}
             variant="bordered"
-            label="Short description"
+            label={t('positions.shortDescriptionLabel')}
             className="sm:col-span-2"
             isInvalid={!!errors.shortDescription}
             errorMessage={errors.shortDescription?.message}
@@ -267,7 +253,7 @@ export default function PositionsPage() {
               onValueChange={(val) => setValue('isPublic', val, { shouldValidate: true })}
             />
             <span className="text-sm">
-              {currentIsPublic ? 'Public — visible to all authenticated users' : 'Restricted — needs access rules'}
+              {currentIsPublic ? t('positions.publicHint') : t('positions.restrictedHint')}
             </span>
           </div>
         </div>
@@ -275,9 +261,11 @@ export default function PositionsPage() {
         {formError && <p className="text-danger text-sm">{formError}</p>}
 
         <div className="flex justify-end gap-2">
-          {editingPosition && <Button variant="light" onPress={clearForm}>Cancel</Button>}
+          {editingPosition && (
+            <Button variant="light" onPress={clearForm}>{t('common.cancel')}</Button>
+          )}
           <Button type="submit" color={editingPosition ? 'warning' : 'primary'} isLoading={isSubmitting}>
-            {editingPosition ? 'Save changes' : 'Create position'}
+            {editingPosition ? t('positions.saveChanges') : t('positions.createPosition')}
           </Button>
         </div>
       </form>
