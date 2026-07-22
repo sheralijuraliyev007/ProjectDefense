@@ -23,14 +23,18 @@ namespace ProjectDefense.Service.Admin.Users
             return ToDto(user);
         }
 
-        public Task<IStatusGeneric> BlockAsync(List<Guid> userIds) =>
-            SetStatus(userIds, UserStatusConstants.BlockedStatusCode);
+        public Task<IStatusGeneric> BlockAsync(List<Guid> userIds)
+        {
+            if(IncludesSelf(userIds)) { AddError("Yoou can't block yourself"); return Task.FromResult<IStatusGeneric>(this); }
+            return   SetStatus(userIds, UserStatusConstants.BlockedStatusCode);
+        }
 
         public Task<IStatusGeneric> UnblockAsync(List<Guid> userIds) =>
             SetStatus(userIds, UserStatusConstants.ActiveStatusCode);
 
         public async Task<IStatusGeneric> DeleteAsync(List<Guid> userIds)
         {
+            if(IncludesSelf(userIds)) { AddError("You can't delete youself"); return this; }
             var users = await FindUsers(userIds).ToListAsync();
             unitOfWork.UserRepository().DeleteRange(users);
             await unitOfWork.SaveChanges();
@@ -70,8 +74,6 @@ namespace ProjectDefense.Service.Admin.Users
 
         private async Task<IStatusGeneric> SetStatus(List<Guid> userIds, short statusCode)
         {
-            
-
             var users = await FindUsers(userIds).ToListAsync();
             if (users.Count == 0) { AddError("No matching users found."); return this; }
 
@@ -121,6 +123,12 @@ namespace ProjectDefense.Service.Admin.Users
                 PageSize = page.PageSize,
                 Total = page.Total
             };
+        }
+
+        private bool IncludesSelf(List<Guid> userIds)
+        {
+            var callerId = userHelper.GetUserId();
+            return callerId != null && userIds.Contains(callerId.Value);
         }
     }
 }
