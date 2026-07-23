@@ -220,8 +220,8 @@ namespace ProjectDefense.Service.Main
             ValueContentUrl = ua.ValueContent?.SecureUrl,
             ValueContentId = ua.ValueContentId,
             IsFilled = ua.ValueGeneric != null || ua.ValueNumeric != null || ua.ValueDate != null
-               || ua.ValueBoolean != null || ua.ValueOptionId != null || ua.ValueContentId != null,
-            IsRemovable = ua.Attribute?.IsRemovable ?? true
+                || ua.ValuePeriodStart != null || ua.ValuePeriodEnd != null
+                || ua.ValueBoolean != null || ua.ValueOptionId != null || ua.ValueContentId != null,
         };
     }
 }
