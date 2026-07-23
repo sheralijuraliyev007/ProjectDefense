@@ -33,14 +33,14 @@ namespace ProjectDefense.Data.Entities.MainEntities
         [Column("value_numeric")]
         public decimal? ValueNumeric { get; set; }
 
-        [Column("value_date")]
+        [Column("value_date", TypeName = "date")]
         public DateTime? ValueDate { get; set; }
 
 
-        [Column("value_period_start")]
+        [Column("value_period_start", TypeName = "date")]
         public DateTime? ValuePeriodStart { get; set; }
         
-        [Column("value_period_end")]
+        [Column("value_period_end", TypeName = "date")]
         public DateTime? ValuePeriodEnd { get; set; }
 
         [Column("value_boolean")]

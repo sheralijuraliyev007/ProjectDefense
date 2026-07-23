@@ -3,17 +3,20 @@ using ProjectDefense.Common.DTOs.Content;
 using ProjectDefense.Common.Models.Insfrastructure;
 using ProjectDefense.Data.Entities.MainEntities;
 using ProjectDefense.Data.Repositories.Interfaces;
+using ProjectDefense.Service.Common.Interfaces;
 using ProjectDefense.Service.Infrastructure.Interfaces;
 using StatusGeneric;
 
 namespace ProjectDefense.Service.Infrastructure
 {
-    public class ContentService(ICloudinaryService cloudinaryService, IUnitOfWork unitOfWork) : StatusGenericHandler, IContentService
+    public class ContentService(ICloudinaryService cloudinaryService, IUnitOfWork unitOfWork, IUserHelper userHelper) : StatusGenericHandler, IContentService
     {
         public UploadSignatureDto GetUploadSignature() => cloudinaryService.GenerateUploadSignature();
 
         public async Task<(IStatusGeneric Status, ContentDto? Content)> ConfirmUploadAsync(ConfirmUploadModel model)
         {
+            var userid = userHelper.GetUserId();
+            if (userid == null) { AddError("User is not logged"); return (this, null); }
             var typeCode = ValidateMimeType(model.MimeType);
             if (typeCode == null) { AddError("Unsupported file type."); return (this, null); }
 
@@ -21,6 +24,7 @@ namespace ProjectDefense.Service.Infrastructure
             if (verified == null) { AddError("Upload could not be verified."); return (this, null); }
 
             var entity = await SaveContent(verified, model.OriginalFilename, typeCode.Value);
+            entity.CreatedUserId = userid;
             return (this, ToDto(entity));
         }
 
@@ -66,5 +70,7 @@ namespace ProjectDefense.Service.Infrastructure
             Height = c.Height,
             SizeBytes = c.SizeBytes,
         };
+
+        
     }
 }
