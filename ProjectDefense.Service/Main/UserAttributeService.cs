@@ -202,26 +202,32 @@ namespace ProjectDefense.Service.Main
             return true;
         }
 
-        private static UserAttributeDto ToDto(UserAttribute ua) => new()
+        private static UserAttributeDto ToDto(UserAttribute ua)
         {
-            Id = ua.Id,
-            AttributeId = ua.AttributeId,
-            AttributeName = ua.Attribute?.Name ?? string.Empty,
-            DtypeCode = ua.Attribute?.DtypeCode ?? 0,
-            Version = ua.Version,
-            ValueGeneric = ua.ValueGeneric,
-            ValueNumeric = ua.ValueNumeric,
-            ValueDate = ua.ValueDate,
-            ValuePeriodStart = ua.ValuePeriodStart,
-            ValuePeriodEnd = ua.ValuePeriodEnd,
-            ValueBoolean = ua.ValueBoolean,
-            ValueOptionId = ua.ValueOptionId,
-            ValueOptionLabel = ua.ValueOption?.Label,
-            ValueContentUrl = ua.ValueContent?.SecureUrl,
-            ValueContentId = ua.ValueContentId,
-            IsFilled = ua.ValueGeneric != null || ua.ValueNumeric != null || ua.ValueDate != null
-                || ua.ValuePeriodStart != null || ua.ValuePeriodEnd != null
-                || ua.ValueBoolean != null || ua.ValueOptionId != null || ua.ValueContentId != null,
-        };
+            Console.WriteLine($"DEBUG: ua.Id={ua.Id} attrId={ua.AttributeId} attrName={ua.Attribute?.Name} attrIsRemovable={ua.Attribute?.IsRemovable} (Attribute null? {ua.Attribute is null})");
+            return new()
+            {
+                Id = ua.Id,
+                AttributeId = ua.AttributeId,
+                AttributeName = ua.Attribute?.Name ?? string.Empty,
+                DtypeCode = ua.Attribute?.DtypeCode ?? 0,
+                Version = ua.Version,
+                ValueGeneric = ua.ValueGeneric,
+                ValueNumeric = ua.ValueNumeric,
+                ValueDate = ua.ValueDate,
+                ValuePeriodStart = ua.ValuePeriodStart,
+                ValuePeriodEnd = ua.ValuePeriodEnd,
+                ValueBoolean = ua.ValueBoolean,
+                ValueOptionId = ua.ValueOptionId,
+                ValueOptionLabel = ua.ValueOption?.Label,
+                ValueContentUrl = ua.ValueContent?.SecureUrl,
+                ValueContentId = ua.ValueContentId,
+                IsFilled = ua.ValueGeneric != null || ua.ValueNumeric != null || ua.ValueDate != null
+                   || ua.ValuePeriodStart != null || ua.ValuePeriodEnd != null
+                   || ua.ValueBoolean != null || ua.ValueOptionId != null || ua.ValueContentId != null,
+                IsRemovable = ua.Attribute?.IsRemovable ?? true,
+                
+            };
+        }
     }
 }
