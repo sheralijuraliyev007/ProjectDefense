@@ -118,6 +118,12 @@
   "isNot": "to nie"
 }
   },
+  "notFound": {
+  "title": "404",
+  "heading": "Strona nie znaleziona",
+  "message": "Strona, której szukasz, nie istnieje.",
+  "goHome": "Strona główna"
+},
   "attributes": {
     "title": "Biblioteka Atrybutów",
     "create": "Utwórz Atrybut",
