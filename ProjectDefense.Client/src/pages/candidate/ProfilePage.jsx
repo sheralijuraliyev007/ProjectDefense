@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Tabs, Tab, Card, CardBody, Input, Chip, Spinner, Button } from '@heroui/react';
 import { UserIcon, InformationCircleIcon, TrashIcon, PhotoIcon } from '@heroicons/react/24/outline';
 import DataTable from '../../components/shared/DataTable';
@@ -68,6 +69,7 @@ const ConflictNote = () => (
 
 export default function ProfilePage() {
   const { userId: targetUserId } = useParams(); // undefined on /profile, set on /admin/users/:userId/profile
+  const { t } = useTranslation();
 
   const [activeTab, setActiveTab] = useState('me');
   const [myAttributes, setMyAttributes] = useState([]);
@@ -108,14 +110,14 @@ export default function ProfilePage() {
     [availableAttributes, myAttributes]
   );
 
-  // Quick lookup: attributeId -> full attribute metadata (incl. options for One-of-Many)
+
   const attributeMetaById = useMemo(() => {
     const map = new Map();
     availableAttributes.forEach((a) => map.set(a.id, a));
     return map;
   }, [availableAttributes]);
 
-  // Records a local edit; nothing is sent to the server until the next auto-save tick.
+
   const markDirty = useCallback((attr, rawValue) => {
     dirtyRef.current.set(attr.attributeId, { attr, rawValue });
     setConflictIds((prev) => {
@@ -126,7 +128,7 @@ export default function ProfilePage() {
     });
   }, []);
 
-  // Sends all pending edits, handles per-field 409 conflicts, then refreshes from server.
+
   const flushDirty = useCallback(async () => {
     if (dirtyRef.current.size === 0) return;
     const entries = Array.from(dirtyRef.current.entries());
@@ -149,14 +151,14 @@ export default function ProfilePage() {
         });
       }
     }
-    await loadMyAttributes(); // pulls fresh values + current versions
+    await loadMyAttributes();
   }, [loadMyAttributes, targetUserId]);
 
   useEffect(() => {
     const id = setInterval(flushDirty, AUTO_SAVE_INTERVAL_MS);
     return () => {
       clearInterval(id);
-      flushDirty(); // save any pending edits on unmount / tab switch away
+      flushDirty();
     };
   }, [flushDirty]);
 
@@ -174,8 +176,6 @@ export default function ProfilePage() {
     await loadMyAttributes();
   };
 
-  // Image upload is a discrete action (not continuous typing), so it saves immediately
-  // rather than going through the dirty/auto-save batching used for text/number fields.
   const handleImageUpload = async (attr, file) => {
     if (!file) return;
     const attributeId = attr.attributeId;
@@ -183,11 +183,11 @@ export default function ProfilePage() {
     setSavingIds((prev) => new Set(prev).add(attributeId));
 
     try {
-      // 1. Ask our backend for a signed upload signature
-      const sigRes = await contentApi.getUploadSignature();
-      const sig = sigRes.data.data; // { signature, timestamp, apiKey, cloudName, folder }
 
-      // 2. Upload the file directly to the cloud provider
+      const sigRes = await contentApi.getUploadSignature();
+      const sig = sigRes.data.data;
+
+
       const formData = new FormData();
       formData.append('file', file);
       formData.append('api_key', sig.apiKey);
@@ -202,15 +202,15 @@ export default function ProfilePage() {
       if (!uploadRes.ok) throw new Error('Upload to storage provider failed.');
       const uploadJson = await uploadRes.json(); // { public_id, secure_url, ... }
 
-      // 3. Confirm with our backend so it persists a Content record
+
       const confirmRes = await contentApi.confirmUpload({
         publicId: uploadJson.public_id,
         originalFilename: file.name,
         mimeType: file.type,
       });
-      const content = confirmRes.data.data; // ContentDto { id, secureUrl, width, height, sizeBytes }
+      const content = confirmRes.data.data;
 
-      // 4. Immediately persist the value on this attribute (with optimistic-lock version)
+
       const payload = buildValuePayload(attributeId, DTYPE.IMAGE, content.id, attr.version);
       await userAttributeApi.setValue(payload, targetUserId);
       await loadMyAttributes();
@@ -274,22 +274,22 @@ export default function ProfilePage() {
           </div>
         );
       case DTYPE.DATE:
-  return (
-    <div>
-      <Input
-        key={`${attr.attributeId}-${attr.version}`}
-        type="date"
-        size="sm"
-        variant="bordered"
-        classNames={{ inputWrapper: inputClasses }}
-        defaultValue={currentValue}
-        onChange={(e) => {
-          if (e.target.value) markDirty(attr, e.target.value); // ignore incomplete typing
-        }}
-      />
-      {hasConflict && <ConflictNote />}
-    </div>
-  );
+        return (
+          <div>
+            <Input
+              key={`${attr.attributeId}-${attr.version}`}
+              type="date"
+              size="sm"
+              variant="bordered"
+              classNames={{ inputWrapper: inputClasses }}
+              defaultValue={currentValue}
+              onChange={(e) => {
+                if (e.target.value) markDirty(attr, e.target.value);
+              }}
+            />
+            {hasConflict && <ConflictNote />}
+          </div>
+        );
       case DTYPE.ONE_OF_MANY: {
         const meta = attributeMetaById.get(attr.attributeId);
         const attrOptions = meta?.options ?? [];
@@ -325,7 +325,7 @@ export default function ProfilePage() {
             )}
             <label className="flex items-center gap-2 border-2 border-dashed border-default-300 rounded-lg px-4 py-3 text-center text-default-500 text-sm cursor-pointer hover:border-primary/50 w-fit">
               <PhotoIcon className="w-4 h-4" />
-              {hasImage ? 'Replace image' : 'Upload image'}
+              {hasImage ? t('profile.replaceImage') : t('profile.uploadImage')}
               <input
                 type="file"
                 accept="image/*"
@@ -340,44 +340,44 @@ export default function ProfilePage() {
         );
       }
       case DTYPE.PERIOD: {
-  const pending = dirtyRef.current.get(attr.attributeId)?.rawValue;
-  const period = pending ?? currentValue;
+        const pending = dirtyRef.current.get(attr.attributeId)?.rawValue;
+        const period = pending ?? currentValue;
 
-  return (
-    <div className="flex gap-2 items-center">
-      <Input
-        key={`${attr.attributeId}-${attr.version}-start`}
-        type="date"
-        size="sm"
-        variant="bordered"
-        classNames={{ inputWrapper: inputClasses }}
-        defaultValue={period.start}
-        onChange={(e) => {
-          if (!e.target.value) return; // ignore incomplete typing
-          const latest = dirtyRef.current.get(attr.attributeId)?.rawValue ?? period;
-          markDirty(attr, { ...latest, start: e.target.value });
-        }}
-      />
-      <span className="text-default-400 text-sm">to</span>
-      <Input
-        key={`${attr.attributeId}-${attr.version}-end`}
-        type="date"
-        size="sm"
-        variant="bordered"
-        classNames={{ inputWrapper: inputClasses }}
-        defaultValue={period.end}
-        onChange={(e) => {
-          if (!e.target.value) return;
-          const latest = dirtyRef.current.get(attr.attributeId)?.rawValue ?? period;
-          markDirty(attr, { ...latest, end: e.target.value });
-        }}
-      />
-      {isSaving && <Spinner size="sm" />}
-      {hasConflict && <ConflictNote />}
-    </div>
-  );
-}
-    
+        return (
+          <div className="flex gap-2 items-center">
+            <Input
+              key={`${attr.attributeId}-${attr.version}-start`}
+              type="date"
+              size="sm"
+              variant="bordered"
+              classNames={{ inputWrapper: inputClasses }}
+              defaultValue={period.start}
+              onChange={(e) => {
+                if (!e.target.value) return;
+                const latest = dirtyRef.current.get(attr.attributeId)?.rawValue ?? period;
+                markDirty(attr, { ...latest, start: e.target.value });
+              }}
+            />
+            <span className="text-default-400 text-sm">to</span>
+            <Input
+              key={`${attr.attributeId}-${attr.version}-end`}
+              type="date"
+              size="sm"
+              variant="bordered"
+              classNames={{ inputWrapper: inputClasses }}
+              defaultValue={period.end}
+              onChange={(e) => {
+                if (!e.target.value) return;
+                const latest = dirtyRef.current.get(attr.attributeId)?.rawValue ?? period;
+                markDirty(attr, { ...latest, end: e.target.value });
+              }}
+            />
+            {isSaving && <Spinner size="sm" />}
+            {hasConflict && <ConflictNote />}
+          </div>
+        );
+      }
+
       default:
         return (
           <div>
@@ -414,26 +414,26 @@ export default function ProfilePage() {
 
   const InfoSection = () => {
     const columns = [
-      { key: 'attributeName', label: 'Name' },
-      { key: 'value', label: 'Value', renderCell: (item) => renderValueInput(item) },
+      { key: 'attributeName', label: t('profile.name') },
+      { key: 'value', label: t('profile.value'), renderCell: (item) => renderValueInput(item) },
       {
         key: 'isFilled',
         label: '',
-        renderCell: (item) => !item.isFilled && <Chip size="sm" color="danger" variant="flat">Empty</Chip>,
+        renderCell: (item) => !item.isFilled && <Chip size="sm" color="danger" variant="flat">{t('profile.empty')}</Chip>,
       },
     ];
 
     return (
       <div className="space-y-4">
         <div className="border border-default-300 bg-content1 rounded-xl p-4">
-          <label className="text-sm font-medium text-default-700 mb-2 block">Add an attribute to your profile</label>
+          <label className="text-sm font-medium text-default-700 mb-2 block">{t('profile.addAttribute')}</label>
           <div className="flex gap-2">
             <select
               id="add-attribute-select"
               className="flex-1 p-2 rounded-lg border border-default-300 bg-background text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none"
               defaultValue=""
             >
-              <option value="" disabled>Choose an attribute…</option>
+              <option value="" disabled>{t('profile.chooseAttribute')}…</option>
               {addableAttributes.map((a) => (
                 <option key={a.id} value={a.id}>{a.name}</option>
               ))}
@@ -449,7 +449,7 @@ export default function ProfilePage() {
                 }
               }}
             >
-              Add
+              {t('profile.add')}
             </button>
           </div>
         </div>
@@ -458,7 +458,7 @@ export default function ProfilePage() {
           <Toolbar
             actions={[
               {
-                label: 'Remove',
+                label: t('profile.removeAttribute'),
                 icon: <TrashIcon className="w-4 h-4" />,
                 color: 'danger',
                 variant: 'flat',
@@ -486,7 +486,7 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <h1 className="text-xl font-semibold">Profile</h1>
+      <h1 className="text-xl font-semibold">{t('profile.profile')}</h1>
 
       {targetUserId && (
         <div className="bg-warning-50 border border-warning-200 text-warning-700 text-sm rounded-lg px-4 py-2">
@@ -495,10 +495,10 @@ export default function ProfilePage() {
       )}
 
       <Tabs selectedKey={activeTab} onSelectionChange={setActiveTab}>
-        <Tab key="me" title={<div className="flex items-center gap-2"><UserIcon className="w-4 h-4" /> Me</div>}>
+        <Tab key="me" title={<div className="flex items-center gap-2"><UserIcon className="w-4 h-4" /> {t('profile.me')}</div>}>
           <Card><CardBody><MeSection /></CardBody></Card>
         </Tab>
-        <Tab key="info" title={<div className="flex items-center gap-2"><InformationCircleIcon className="w-4 h-4" /> Info</div>}>
+        <Tab key="info" title={<div className="flex items-center gap-2"><InformationCircleIcon className="w-4 h-4" /> {t('profile.info')}</div>}>
           <Card><CardBody><InfoSection /></CardBody></Card>
         </Tab>
       </Tabs>

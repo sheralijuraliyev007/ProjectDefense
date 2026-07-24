@@ -163,15 +163,16 @@
   "profile": {
     "me": "Me",
     "info": "Info",
-    "projects": "Projects",
+    "profile" : "Profile",
     "cvs": "My CVs",
-    "firstName": "First Name",
-    "lastName": "Last Name",
-    "location": "Location",
-    "photo": "Photo",
-    "addAttribute": "Add Attribute",
+    "addAttribute": "Add an attribute to your profile",
     "removeAttribute": "Remove",
+    "chooseAttribute" :"Choose an attribute",
+    "replaceImage" :"Replace image",
+    "uploadImage" :"Upload image",
+    "add" : "Add",
     "projectName": "Project Name",
+    "empty" : "Empty",
     "period": "Period",
     "projectDescription": "Description",
     "technologyTags": "Technology Tags",
@@ -181,7 +182,9 @@
     "saving": "Saving...",
     "saved": "Saved",
     "saveError": "Save failed - version conflict",
-    "autoSave": "Auto-save enabled"
+    "autoSave": "Auto-save enabled",
+    "name" : "name",
+    "value" : "value"
   },
 
   "notFound": {

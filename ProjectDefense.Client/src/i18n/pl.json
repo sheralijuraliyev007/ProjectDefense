@@ -169,15 +169,16 @@
   "profile": {
     "me": "O mnie",
     "info": "Informacje",
-    "projects": "Projekty",
+    "profile": "Profil",
     "cvs": "Moje CV",
-    "firstName": "Imię",
-    "lastName": "Nazwisko",
-    "location": "Lokalizacja",
-    "photo": "Zdjęcie",
-    "addAttribute": "Dodaj Atrybut",
+    "addAttribute": "Dodaj atrybut do swojego profilu",
     "removeAttribute": "Usuń",
+    "chooseAttribute": "Wybierz atrybut",
+    "replaceImage": "Zastąp obraz",
+    "uploadImage": "Prześlij obraz",
+    "add": "Dodaj",
     "projectName": "Nazwa Projektu",
+    "empty": "Puste",
     "period": "Okres",
     "projectDescription": "Opis",
     "technologyTags": "Tagi Technologii",
@@ -187,7 +188,9 @@
     "saving": "Zapisywanie...",
     "saved": "Zapisano",
     "saveError": "Błąd zapisu - konflikt wersji",
-    "autoSave": "Auto-zapis włączony"
+    "autoSave": "Auto-zapis włączony",
+    "name": "Nazwa",
+    "value": "Wartość"
   },
   "table": {
     "rowsPerPage": "Wierszy na stronę",
