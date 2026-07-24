@@ -61,7 +61,7 @@ namespace ProjectDefense.Service.Main
             var dto = await base.GetByIdAsync<TId>(id);
             if (dto == null) return null;
 
-            if (dto.IsPublic) return dto; // public positions are visible to everyone, logged in or not
+            if (dto.IsPublic) return dto; 
 
             var userId = _userHelper.GetUserId();
             if (userId == null) { AddError("Not found"); return null; }

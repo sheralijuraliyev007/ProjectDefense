@@ -80,7 +80,7 @@ namespace ProjectDefense.Service.Main
             return this;
         }
 
-        // ---------- CV attribute display (composed from Position + UserAttribute, no CvAttribute table) ----------
+        
 
         public async Task<List<UserAttributeDto>> GetCvAttributesAsync(long cvId)
         {
