@@ -82,7 +82,7 @@ public class PositionRuleService(IUnitOfWork unitOfWork, IUserHelper userHelper,
             AttributeId = r.AttributeId,
             RuleCode = r.RuleCode,
             ValueNumeric = r.ValueNumeric,
-            ValueDate = r.ValueDate,
+            ValueDate = r.ValueDate.HasValue ? DateTime.SpecifyKind(r.ValueDate.Value, DateTimeKind.Utc) : null,
             ValueBoolean = r.ValueBoolean,
             ValueOptionId = r.ValueOptionId,
         }).ToList();
