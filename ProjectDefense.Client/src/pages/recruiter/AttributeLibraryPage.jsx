@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button, Input, Select, SelectItem } from '@heroui/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -7,7 +8,6 @@ import { z } from 'zod';
 import DataTable from '../../components/shared/DataTable';
 import Toolbar from '../../components/shared/Toolbar';
 import lookupApi from '../../api/lookupApi';
-import ConfirmDialog from '../../components/shared/ConfirmDialog';
 import attributeApi from '../../api/attributeApi';
 
 const attributeSchema = z.object({
@@ -28,6 +28,8 @@ function extractErrorMessage(err, fallback) {
 }
 
 export default function AttributeLibraryPage() {
+  const { t } = useTranslation();
+
   const [attributes, setAttributes] = useState([]);
   const [categories, setCategories] = useState([]);
   const [types, setTypes] = useState([]);
@@ -38,9 +40,7 @@ export default function AttributeLibraryPage() {
   const [editingAttribute, setEditingAttribute] = useState(null);
   const [formError, setFormError] = useState('');
   const [deleteError, setDeleteError] = useState('');
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
-  
   const [options, setOptions] = useState(['']);
 
   const {
@@ -60,7 +60,6 @@ export default function AttributeLibraryPage() {
     lookupApi.attributeTypes().then((res) => setTypes(res.data.data));
   }, []);
 
-  
   const oneOfManyType = types.find((t) =>
     t.name?.toLowerCase().includes('one of many')
   );
@@ -135,7 +134,7 @@ export default function AttributeLibraryPage() {
       setSelectedKeys(new Set());
       fetchAttributes();
     } catch (err) {
-      setFormError(extractErrorMessage(err, 'Could not save this attribute.'));
+      setFormError(extractErrorMessage(err, t('attributes.saveError')));
     }
   };
 
@@ -147,31 +146,30 @@ export default function AttributeLibraryPage() {
       clearForm();
       fetchAttributes();
     } catch (err) {
-      setDeleteError(extractErrorMessage(err, 'Could not delete one or more attributes.'));
+      setDeleteError(extractErrorMessage(err, t('attributes.deleteError')));
     }
   };
 
   const columns = [
-    { key: 'name', label: 'Name', sortable: true },
-    { key: 'categoryName', label: 'Category', renderCell: (item) => <span className="text-default-500">{item.categoryName}</span> },
-    { key: 'dtypeName', label: 'Type', renderCell: (item) => <span className="text-default-500">{item.dtypeName}</span> },
-    { key: 'description', label: 'Description', renderCell: (item) => <span className="text-default-400">{item.description || '—'}</span> },
+    { key: 'name', label: t('attributes.name'), sortable: true },
+    { key: 'categoryName', label: t('attributes.category'), renderCell: (item) => <span className="text-default-500">{item.categoryName}</span> },
+    { key: 'dtypeName', label: t('attributes.type'), renderCell: (item) => <span className="text-default-500">{item.dtypeName}</span> },
+    { key: 'description', label: t('attributes.description'), renderCell: (item) => <span className="text-default-400">{item.description || '—'}</span> },
   ];
 
   const toolbarActions = [
-    { label: 'Edit', requiresSelection: true, onClick: handleEdit },
-    { label: 'Delete', color: 'danger', requiresSelection: true, onClick: handleDelete },
-    { label: 'Clear form', requiresSelection: false, onClick: clearForm },
+    { label: t('common.edit'), requiresSelection: true, onClick: handleEdit },
+    { label: t('common.delete'), color: 'danger', requiresSelection: true, onClick: handleDelete },
+    { label: t('attributes.clearForm'), requiresSelection: false, onClick: clearForm },
   ];
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 py-2">
       <div className="space-y-1">
-        <h1 className="text-xl font-semibold">Attributes</h1>
-        <p className="text-sm text-default-500">Reusable fields used across positions and CVs.</p>
+        <h1 className="text-xl font-semibold">{t('attributes.title')}</h1>
+        <p className="text-sm text-default-500">{t('attributes.subtitle')}</p>
       </div>
 
-      
       <form
         onSubmit={handleSubmit(onSubmit)}
         className={`border-l-4 rounded-md p-5 space-y-4 transition-colors ${
@@ -189,18 +187,16 @@ export default function AttributeLibraryPage() {
             )}
             <div>
               <h2 className={`text-base font-semibold ${editingAttribute ? 'text-warning-700' : 'text-primary-700'}`}>
-                {editingAttribute ? editingAttribute.name : 'Create a new attribute'}
+                {editingAttribute ? editingAttribute.name : t('attributes.create')}
               </h2>
               <p className="text-xs text-default-500">
-                {editingAttribute
-                  ? 'You are editing an existing attribute from the list below.'
-                  : 'Fill in the fields below to add a reusable attribute to the library.'}
+                {editingAttribute ? t('attributes.editingNotice') : t('attributes.createInfo')}
               </p>
             </div>
           </div>
           {editingAttribute && (
             <Button size="sm" variant="flat" color="warning" onPress={clearForm}>
-              Cancel edit
+              {t('attributes.cancelEdit')}
             </Button>
           )}
         </div>
@@ -209,15 +205,15 @@ export default function AttributeLibraryPage() {
           <Input
             {...register('name')}
             variant="bordered"
-            label="Name"
-            placeholder="e.g. English Level"
+            label={t('attributes.name')}
+            placeholder={t('attributes.nameEg')}
             isInvalid={!!errors.name}
             errorMessage={errors.name?.message}
           />
           <Select
             variant="bordered"
-            label="Category"
-            placeholder="Choose a category"
+            label={t('attributes.category')}
+            placeholder={t('attributes.categoryChoose')}
             selectedKeys={currentCategory ? [currentCategory] : []}
             onSelectionChange={(keys) => setValue('categoryCode', Array.from(keys)[0], { shouldValidate: true })}
             isInvalid={!!errors.categoryCode}
@@ -229,24 +225,24 @@ export default function AttributeLibraryPage() {
           </Select>
           <Select
             variant="bordered"
-            label="Type"
-            placeholder="Choose a type"
+            label={t('attributes.type')}
+            placeholder={t('attributes.chooseAType')}
             selectedKeys={currentType ? [currentType] : []}
             onSelectionChange={(keys) => setValue('dtypeCode', Array.from(keys)[0], { shouldValidate: true })}
             isInvalid={!!errors.dtypeCode}
             errorMessage={errors.dtypeCode?.message}
             isDisabled={!!editingAttribute}
-            description={editingAttribute ? "Type can't change once values exist." : undefined}
+            description={editingAttribute ? t('attributes.typeLocked') : undefined}
           >
-            {types.map((t) => (
-              <SelectItem key={t.code} value={t.code}>{t.name}</SelectItem>
+            {types.map((tp) => (
+              <SelectItem key={tp.code} value={tp.code}>{tp.name}</SelectItem>
             ))}
           </Select>
           <Input
             {...register('description')}
             variant="bordered"
-            label="Description"
-            placeholder="What is this attribute for?"
+            label={t('attributes.description')}
+            placeholder={t('attributes.descriptionInfo')}
           />
 
           {isOneOfMany && (
@@ -284,14 +280,14 @@ export default function AttributeLibraryPage() {
 
         <div className="flex justify-end gap-2">
           {editingAttribute && (
-            <Button variant="light" onPress={clearForm}>Cancel</Button>
+            <Button variant="light" onPress={clearForm}>{t('common.cancel')}</Button>
           )}
           <Button
             type="submit"
             color={editingAttribute ? 'warning' : 'primary'}
             isLoading={isSubmitting}
           >
-            {editingAttribute ? 'Save changes' : 'Create attribute'}
+            {editingAttribute ? t('attributes.saveChanges') : t('attributes.createAttribute')}
           </Button>
         </div>
       </form>
@@ -302,7 +298,7 @@ export default function AttributeLibraryPage() {
           variant="flat"
           radius="sm"
           className="max-w-xs"
-          placeholder="Search attributes"
+          placeholder={t('attributes.searchAttributes')}
           startContent={<MagnifyingGlassIcon className="w-4 h-4 text-default-400" />}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -314,7 +310,7 @@ export default function AttributeLibraryPage() {
           variant="flat"
           radius="sm"
           className="max-w-xs"
-          placeholder="All categories"
+          placeholder={t('attributes.allCategories')}
           selectedKeys={categoryFilter ? [categoryFilter] : []}
           onSelectionChange={(keys) => setCategoryFilter(Array.from(keys)[0] || '')}
         >
@@ -329,6 +325,8 @@ export default function AttributeLibraryPage() {
           <Toolbar actions={toolbarActions} selectedCount={selectedKeys.size} />
         </div>
 
+        {deleteError && <p className="text-danger text-sm">{deleteError}</p>}
+
         <DataTable
           columns={columns}
           data={attributes}
@@ -336,23 +334,9 @@ export default function AttributeLibraryPage() {
           onSelectionChange={setSelectedKeys}
           isLoading={isLoading}
           removeWrapper
-          emptyContent="No attributes yet."
+          emptyContent={t('attributes.noAttributes')}
         />
       </div>
-
-      <ConfirmDialog
-        isOpen={isDeleteOpen}
-        onClose={() => setIsDeleteOpen(false)}
-        onConfirm={handleDelete}
-        title="Delete attribute?"
-        message={
-          selectedIds.length > 1
-            ? `This will permanently delete ${selectedIds.length} attributes.`
-            : 'This will permanently delete this attribute.'
-        }
-        confirmColor="danger"
-        error={deleteError}
-      />
     </div>
   );
 }
