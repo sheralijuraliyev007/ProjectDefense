@@ -68,7 +68,7 @@ namespace ProjectDefense.Data.Context
                 .HasIndex(ua => new { ua.UserId, ua.AttributeId })
                 .IsUnique();
 
-            modelBuilder.Entity<Data.Entities.MainEntities.Attribute>()
+            modelBuilder.Entity<Entities.MainEntities.Attribute>()
                 .HasIndex(a => a.Name)
                 .IsUnique();
 

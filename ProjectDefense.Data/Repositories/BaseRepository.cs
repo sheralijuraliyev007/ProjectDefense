@@ -20,6 +20,8 @@ namespace ProjectDefense.Data.Repositories
 
         public void AddRange(List<T> entities)
         {
+            foreach (var entity in entities)
+                entity.ModifiedDateTime = DateTimeOffset.UtcNow;
             context.Set<T>().AddRange(entities);
         }
 
@@ -38,6 +40,8 @@ namespace ProjectDefense.Data.Repositories
         public IQueryable<T> GetAll(params Expression<Func<T, object>>[] includes)
         {
             IQueryable<T> query = context.Set<T>();
+
+            
 
             foreach (var include in includes)
             {
@@ -65,6 +69,9 @@ namespace ProjectDefense.Data.Repositories
 
         public void UpdateRange(List<T> entities)
         {
+
+            foreach (var entity in entities)
+                entity.ModifiedDateTime = DateTimeOffset.UtcNow;
             context.Set<T>().UpdateRange(entities);
         }
     }

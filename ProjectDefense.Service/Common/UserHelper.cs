@@ -8,8 +8,6 @@ namespace ProjectDefense.Service.Common
     {
         private ClaimsPrincipal? User = contextAccessor.HttpContext.User;
 
-        public string? GetUserEmail() => User?.FindFirst(ClaimTypes.Name)?.Value;
-
         public Guid? GetUserId() => Guid.TryParse(User?.FindFirst
             (ClaimTypes.NameIdentifier)?.Value, out var userId)
             ? userId: null;
