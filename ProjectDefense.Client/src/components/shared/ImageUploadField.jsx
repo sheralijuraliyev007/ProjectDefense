@@ -15,12 +15,11 @@ export default function ImageUploadField({ value, onChange, disabled }) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate
     if (!file.type.startsWith('image/')) {
       setError('Please select an image file');
       return;
     }
-    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+    if (file.size > 10 * 1024 * 1024) { 
       setError('File too large (max 10MB)');
       return;
     }
@@ -29,11 +28,11 @@ export default function ImageUploadField({ value, onChange, disabled }) {
     setIsUploading(true);
 
     try {
-      // Show local preview immediately
+      
       const localPreview = URL.createObjectURL(file);
       setPreview(localPreview);
 
-      // Upload
+      
       const contentDto = await contentApi.uploadImage(file);
       
       setPreview(contentDto.secureUrl);

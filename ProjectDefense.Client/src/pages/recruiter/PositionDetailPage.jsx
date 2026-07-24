@@ -51,9 +51,9 @@ export default function PositionDetailPage() {
   const operatorsByDtype = useMemo(() => getOperatorsByDtype(t), [t]);
 
   const [position, setPosition] = useState(null);
-  const [positionAttributes, setPositionAttributes] = useState([]); // AttributeDto[]
-  const [allAttributes, setAllAttributes] = useState([]); // AttributeDto[] full library
-  const [rules, setRules] = useState([]); // local editable rule rows
+  const [positionAttributes, setPositionAttributes] = useState([]); 
+  const [allAttributes, setAllAttributes] = useState([]);
+  const [rules, setRules] = useState([]); 
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingAttrs, setIsSavingAttrs] = useState(false);
   const [isSavingRules, setIsSavingRules] = useState(false);
@@ -121,7 +121,7 @@ export default function PositionDetailPage() {
     setIsSavingAttrs(true);
     try {
       await positionApi.setAttributes(id, newIds);
-      // Also drop any rules referencing this attribute, since it's no longer required
+      
       setRules((prev) => prev.filter((r) => r.attributeId !== attributeId));
       await loadAll();
     } finally {
@@ -186,7 +186,7 @@ export default function PositionDetailPage() {
           />
         );
       case DTYPE.BOOLEAN:
-        return null; // "is true"/"is false" operator already encodes the value
+        return null; 
       case DTYPE.ONE_OF_MANY:
         return (
           <select

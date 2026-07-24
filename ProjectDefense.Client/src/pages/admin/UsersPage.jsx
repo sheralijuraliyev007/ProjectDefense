@@ -102,9 +102,6 @@ export default function UsersPage() {
     runAction(() => userApi.removeRole([userId], code));
   };
 
-  // Takes the admin to a page for viewing/editing this one user's profile
-  // attributes (add/remove attributes, change values) — same underlying
-  // endpoints the candidate's own Profile page uses, just with ?targetUserId set.
   const handleManageProfile = () => {
     navigate(`/admin/users/${selectedIds[0]}/profile`);
   };
@@ -179,7 +176,7 @@ export default function UsersPage() {
       icon: <IdentificationIcon className="w-4 h-4" />,
       color: 'primary',
       requiresSelection: true,
-      isDisabled: selectedIds.length !== 1, // detail view — only makes sense for exactly one user
+      isDisabled: selectedIds.length !== 1, 
       onClick: handleManageProfile,
     },
     {

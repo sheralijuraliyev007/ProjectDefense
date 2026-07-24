@@ -17,9 +17,7 @@ function PositionListView() {
       setIsLoading(true);
       try {
         const res = await positionApi.search({ page: 1, pageSize: 50 });
-        // Anonymous/candidate users only ever get eligible positions back from the
-        // backend (PositionService.GetAllAsync already filters this server-side),
-        // so no client-side isPublic filtering needed here.
+        
         setPositions(res.data.data?.rows ?? []);
       } finally {
         setIsLoading(false);

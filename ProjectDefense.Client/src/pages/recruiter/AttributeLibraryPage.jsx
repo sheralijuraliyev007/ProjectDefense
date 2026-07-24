@@ -40,7 +40,7 @@ export default function AttributeLibraryPage() {
   const [deleteError, setDeleteError] = useState('');
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
-  // Options list for "One of Many" attribute type (create + edit)
+  
   const [options, setOptions] = useState(['']);
 
   const {
@@ -60,8 +60,7 @@ export default function AttributeLibraryPage() {
     lookupApi.attributeTypes().then((res) => setTypes(res.data.data));
   }, []);
 
-  // Derive the "One of Many" type's code from the lookup data itself,
-  // instead of hardcoding a numeric constant that could drift from the DB.
+  
   const oneOfManyType = types.find((t) =>
     t.name?.toLowerCase().includes('one of many')
   );
@@ -172,7 +171,7 @@ export default function AttributeLibraryPage() {
         <p className="text-sm text-default-500">Reusable fields used across positions and CVs.</p>
       </div>
 
-      {/* Always-visible create/edit form */}
+      
       <form
         onSubmit={handleSubmit(onSubmit)}
         className={`border-l-4 rounded-md p-5 space-y-4 transition-colors ${

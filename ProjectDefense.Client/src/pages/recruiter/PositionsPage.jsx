@@ -17,9 +17,6 @@ const positionSchema = z.object({
   maxProjects: z.coerce.number().int().min(0),
 });
 
-// Turns an axios error into a message worth showing the user.
-// If err.response is missing entirely, the request never reached the server —
-// that's a network/CORS/wrong-port problem, not something the user did wrong.
 function extractErrorMessage(err, fallback, t) {
   if (!err.response) {
     return t('positions.networkError');
@@ -67,7 +64,7 @@ export default function PositionsPage() {
     setIsLoading(true);
     try {
       const response = await positionApi.search({ page, pageSize });
-      const data = response.data.data; // PaginationModel<PositionDto>: { rows, pageIndex, pageSize, total }
+      const data = response.data.data; 
       setPositions(data?.rows ?? []);
       setTotalPages(Math.max(1, Math.ceil((data?.total ?? 0) / pageSize)));
     } finally {

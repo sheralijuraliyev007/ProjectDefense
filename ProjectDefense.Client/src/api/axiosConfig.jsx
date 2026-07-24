@@ -16,7 +16,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Response interceptor - handle errors
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {

@@ -42,14 +42,14 @@ export default function MainPage() {
         const [latestRes, popularRes, statsRes] = await Promise.all([
           positionApi.search({ page: 1, pageSize: 5, sortBy: 'updatedAt', sortDirection: 'descending' }),
           positionApi.search({ page: 1, pageSize: 5, sortBy: 'cvsCount', sortDirection: 'descending' }),
-          // statsApi.getStatistics(), // You'll need to create this
+          
         ]);
         
         setLatestPositions(latestRes.data.data.items);
         setPopularPositions(popularRes.data.data.items);
-        // setStatistics(statsRes.data.data);
         
-        // Mock tag cloud data
+        
+        
         setTagCloud([
           { tag: 'React', count: 45, size: 'large' },
           { tag: 'TypeScript', count: 38, size: 'large' },
@@ -85,7 +85,7 @@ export default function MainPage() {
 
   return (
     <div className="space-y-8">
-      {/* Hero / Statistics */}
+      
       <section>
         <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
           <FireIcon className="w-5 h-5 text-danger" />
@@ -125,7 +125,7 @@ export default function MainPage() {
         </div>
       </section>
 
-      {/* Latest Positions */}
+  
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold flex items-center gap-2">
@@ -161,7 +161,7 @@ export default function MainPage() {
         </div>
       </section>
 
-      {/* Most Popular Positions */}
+      
       <section>
         <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
           <FireIcon className="w-5 h-5 text-danger" />
@@ -189,7 +189,7 @@ export default function MainPage() {
         </div>
       </section>
 
-      {/* Tag Cloud */}
+      
       <section>
         <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
           <TagIcon className="w-5 h-5 text-secondary" />
