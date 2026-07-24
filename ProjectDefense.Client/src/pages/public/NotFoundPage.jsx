@@ -11,7 +11,7 @@ export default function NotFoundPage() {
       <h2 className="text-2xl font-semibold mb-2">{t('notFound.heading')}</h2>
       <p className="text-default-500 mb-6">{t('notFound.message')}</p>
       <Button as={Link} to="/" color="primary" startContent={<HomeIcon className="w-4 h-4" />}>
-        Go Home
+        {t('notFound.goHome')}
       </Button>
     </div>
   );
