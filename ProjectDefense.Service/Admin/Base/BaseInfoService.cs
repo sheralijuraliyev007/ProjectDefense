@@ -9,18 +9,9 @@ using StatusGeneric;
 
 namespace ProjectDefense.Service.Admin.Base
 {
-    public class BaseInfoService<TEntity> : StatusGenericHandler, IBaseInfoService<TEntity>
+    public class BaseInfoService<TEntity>(IBaseRepository<TEntity> _baseRepository, IUserHelper _userHelper) : StatusGenericHandler, IBaseInfoService<TEntity>
         where TEntity : BaseEntity
     {
-        protected readonly IBaseRepository<TEntity> _baseRepository;
-        protected readonly IUserHelper _userHelper;
-
-        public BaseInfoService(IBaseRepository<TEntity> baseRepository, IUserHelper userHelper)
-        {
-            _baseRepository = baseRepository;
-            _userHelper = userHelper;
-        }
-
         public async Task<string> Create<TModel>(TModel model)
         {
             var (userExists, userId) = UserExists();

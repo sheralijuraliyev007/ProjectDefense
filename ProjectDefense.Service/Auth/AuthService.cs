@@ -33,7 +33,7 @@ namespace ProjectDefense.Service.Auth
             }
             catch (Exception)
             {
-                AddError("Account created, but the verification email couldn't be sent. Please use 'resend verification' shortly.");
+                AddError("Account created, but the verification email couldn't be sent");
             }
 
             return user.MapToDto<User, UserDto>(_config);
