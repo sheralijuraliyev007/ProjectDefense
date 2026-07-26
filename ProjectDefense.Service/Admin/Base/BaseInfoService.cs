@@ -74,6 +74,7 @@ namespace ProjectDefense.Service.Admin.Base
             var (userExists, userId) = UserExists();
             if (!userExists) return string.Empty;
 
+            
             model.Adapt(entity);
             entity!.ModifiedUserId = userId;
 

@@ -209,7 +209,7 @@ namespace ProjectDefense.Service.Auth
         {
             var status = await unitOfWork.UserStatusRepository().GetAll().FirstOrDefaultAsync(s => s.Code == user.StatusCode);
             if (status is null)
-                throw new InvalidOperationException($"No status found for code {user.StatusCode} — check seed data.");
+                throw new InvalidOperationException($"No status found for code {user.StatusCode}");
 
             user.Status = status;
         }
