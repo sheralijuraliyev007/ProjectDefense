@@ -61,7 +61,7 @@ namespace ProjectDefense.Service.Main
             await unitOfWork.DiscussionMessageRepository().Add(message);
             await unitOfWork.SaveChanges();
 
-            // reload with User included so ToDto has the author info, without a second manual query
+            
             message.User = await unitOfWork.UserRepository().GetById(userId);
             return message;
         }

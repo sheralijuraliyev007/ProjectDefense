@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { jwtDecode } from 'jwt-decode';
+import * as signalR from '@microsoft/signalr';
 import authApi from '../api/authApi';
 
 const AuthContext = createContext(null);
@@ -19,25 +20,31 @@ function buildUserFromToken(token) {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const isAuthenticated = !!user;
+
+  const logout = useCallback(() => {
+    localStorage.removeItem('accessToken');
+    setUser(null);
+  }, []);
 
   useEffect(() => {
-  if (!isAuthenticated) return;
+    if (!isAuthenticated) return;
 
-  const token = localStorage.getItem('accessToken');
-  const connection = new signalR.HubConnectionBuilder()
-    .withUrl(`${import.meta.env.VITE_API_URL}/hubs/notifications?access_token=${token}`)
-    .withAutomaticReconnect()
-    .build();
+    const token = localStorage.getItem('accessToken');
+    const connection = new signalR.HubConnectionBuilder()
+      .withUrl(`${import.meta.env.VITE_API_URL}/hubs/notifications?access_token=${token}`)
+      .withAutomaticReconnect()
+      .build();
 
-  connection.on('RolesChanged', () => {
-    logout();
-    window.location.href = '/login';
-  });
+    connection.on('RolesChanged', () => {
+      logout();
+      window.location.href = '/login';
+    });
 
-  connection.start().catch(console.error);
+    connection.start().catch(console.error);
 
-  return () => { connection.stop(); };
-}, [isAuthenticated]);
+    return () => { connection.stop(); };
+  }, [isAuthenticated, logout]);
 
   const login = useCallback(async (credentials) => {
     const response = await authApi.login(credentials);
@@ -59,12 +66,7 @@ export function AuthProvider({ children }) {
 
   const register = useCallback(async (data) => {
     const response = await authApi.register(data);
-    return response.data.data; // UserDto — no token, no auto-login (backend doesn't issue one on register)
-  }, []);
-
-  const logout = useCallback(() => {
-    localStorage.removeItem('accessToken');
-    setUser(null);
+    return response.data.data;
   }, []);
 
   const hasRole = useCallback((roles) => {
@@ -76,7 +78,7 @@ export function AuthProvider({ children }) {
   const value = {
     user,
     isLoading,
-    isAuthenticated: !!user,
+    isAuthenticated,
     login,
     socialLogin,
     register,
