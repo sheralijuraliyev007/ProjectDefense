@@ -99,6 +99,7 @@ namespace ProjectDefense.Service.Auth
         {
             var user = await unitOfWork.UserRepository().GetByEmail(loginModel.Email);
             if (!IsValidLogin(user, loginModel.Password)) return null;
+            if(!IsActive(user!)) return null;
             return jwtService.GenerateToken(user!);
         }
 
@@ -124,6 +125,7 @@ namespace ProjectDefense.Service.Auth
             var socialInfo = await ValidateSocialToken(provider, model.IdToken);
             if (socialInfo is null) return null;
             var user = await FindOrCreateSocialUser(socialInfo);
+            if(!IsActive(user)) return null;
             return jwtService.GenerateToken(user);
         }
 
@@ -235,6 +237,13 @@ namespace ProjectDefense.Service.Auth
                 .Map(d => d.Roles, s => s.UserRoles.Select(r => r.Role!.Name).ToList())
                 .Map(d => d.StatusName, s => s.Status!.Name);
             return config;
+        }
+
+        private bool IsActive(User user)
+        {
+            bool check = user.StatusCode == UserStatusConstants.ActiveStatusCode;
+            if (!check) AddError("You are blocked");
+            return check;
         }
     }
 }
