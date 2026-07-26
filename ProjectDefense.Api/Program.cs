@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using ProjectDefense.Api.Hubs;
+using ProjectDefense.Api.Middlewares;
 using ProjectDefense.Common.Mapping;
 using ProjectDefense.Common.Settings.Cloudinary;
 using ProjectDefense.Common.Settings.Facebook;
@@ -159,6 +160,7 @@ if (app.Environment.IsDevelopment())
 app.UseCors("AllowReactApp");
 app.UseHttpsRedirection();
 app.UseAuthentication();
+app.UseMiddleware<BlockedUserMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();
