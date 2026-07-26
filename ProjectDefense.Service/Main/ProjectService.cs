@@ -31,24 +31,27 @@ namespace ProjectDefense.Service.Main
             Description = model.Description
         };
 
-        protected override async Task<bool> CanModify(Project entity, Guid userId)
+        protected override async Task<bool> CanModify(Project? project = null, Guid? userId = null)
         {
-            if (entity.UserId == userId) return true;
-            return await unitOfWork.UserRoleRepository().GetAll()
+            userId ??= _userHelper.GetUserId();
+            if (userId == null) { AddError("You are not logged in"); return false; }
+
+            bool isOwner = project != null && project.CreatedUserId == userId;
+            bool isAdmin = await unitOfWork.UserRoleRepository().GetAll()
                 .AnyAsync(ur => ur.UserId == userId && ur.RoleCode == RoleConstants.Administrator);
+
+            bool check = isOwner || isAdmin;
+            if (!check) AddError("You are not allowed to do this action");
+            return check;
         }
+
 
         public async Task<IStatusGeneric> SetTagsAsync(int projectId, List<string> tagLabels)
         {
             var project = await _repository.GetById(projectId);
             if (project == null) { AddError("Project not found."); return this; }
 
-            var userId = _userHelper.GetUserId();
-            if (userId == null || !await CanModify(project, userId.Value))
-            {
-                AddError("You're not allowed to edit this project.");
-                return this;
-            }
+            if(!await CanModify(project)) return this;
 
             await ReplaceTagLinks(projectId, tagLabels);
             return this;

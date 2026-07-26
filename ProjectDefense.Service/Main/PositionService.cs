@@ -39,13 +39,23 @@ namespace ProjectDefense.Service.Main
             StatusCode = CommonStatusConstants.ActiveStatusCode
         };
 
-        protected override async Task<bool> CanModify(Position entity, Guid userId) =>
-            await unitOfWork.UserRoleRepository().GetAll()
+        protected override async Task<bool> CanModify(Position? entity = null, Guid? userId = null)
+        {
+            
+            userId ??= _userHelper.GetUserId();
+            if (userId == null) { AddError("You are not logged in"); return false;  }
+
+
+            bool check = await unitOfWork.UserRoleRepository().GetAll()
                 .AnyAsync(ur => ur.UserId == userId
                     && (ur.RoleCode == RoleConstants.Recruiter || ur.RoleCode == RoleConstants.Administrator));
+            if (!check) AddError("You are not allowed to do this action");
+            return check;
+        }
 
         public override async Task<TId?> AddAsync<TId>(PositionCreateModel createModel) where TId: struct
         {
+            if (!await CanModify()) return null;
             var id = await base.AddAsync<TId>(createModel);
             if (id == null) return id;
 
@@ -96,12 +106,9 @@ namespace ProjectDefense.Service.Main
             var source = await _repository.GetById(positionId);
             if (source == null) { AddError("Position not found."); return null; }
 
+            if (!await CanModify()) return null; 
             var userId = _userHelper.GetUserId();
-            if (userId == null || !await CanModify(source, userId.Value))
-            {
-                AddError("You're not allowed to duplicate this position.");
-                return null;
-            }
+            
 
             var copy = new Position
             {
@@ -169,12 +176,7 @@ namespace ProjectDefense.Service.Main
             var position = await _repository.GetById(positionId);
             if (position == null) { AddError("Position not found."); return false; }
 
-            var userId = _userHelper.GetUserId();
-            if (userId == null || !await CanModify(position, userId.Value))
-            {
-                AddError("You're not allowed to edit this position.");
-                return false;
-            }
+            if (!await CanModify()) return false;
             return true;
         }
 

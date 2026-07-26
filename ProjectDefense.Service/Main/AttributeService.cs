@@ -43,10 +43,18 @@ namespace ProjectDefense.Service.Main
             CategoryCode = createModel.CategoryCode
         };
 
-        protected override async Task<bool> CanModify(Data.Entities.MainEntities.Attribute entity, Guid userId) =>
-            await _userRoleRepository.GetAll()
-            .AnyAsync(ur => ur.UserId == userId
-            && (ur.RoleCode == RoleConstants.Recruiter || ur.RoleCode == RoleConstants.Administrator));
+        
+        protected override async Task<bool> CanModify(Data.Entities.MainEntities.Attribute? attribute = null, Guid? userId = null)
+        {
+            userId ??= _userHelper.GetUserId();
+            if (userId == null) { AddError("You are not logged in"); return false; }
+
+            bool check = await _userRoleRepository.GetAll()
+                .AnyAsync(ur => ur.UserId == userId
+                    && (ur.RoleCode == RoleConstants.Recruiter || ur.RoleCode == RoleConstants.Administrator));
+            if (!check) AddError("You are not allowed to do this action");
+            return check;
+        }
 
         protected override IQueryable<Data.Entities.MainEntities.Attribute> GetAllQuery() =>
             _repository.GetAll(a => a.DType!, a => a.CategoryType!, a=>a.Options);
@@ -63,6 +71,8 @@ namespace ProjectDefense.Service.Main
 
         public override async Task<TId?> AddAsync<TId>(AttributeCreateModel createModel) where TId  : struct
         {
+            if(!await CanModify()) return null;
+
             var id = await base.AddAsync<TId>(createModel);
 
             if (id == null) return id;
@@ -75,6 +85,8 @@ namespace ProjectDefense.Service.Main
         }
         public override async Task<IStatusGeneric> DeleteAsync<TId>(TId id)
         {
+            if (!await CanModify()) return this;
+
             var entity = await _repository.GetById(id);
             if (entity is null)
             {
@@ -102,6 +114,8 @@ namespace ProjectDefense.Service.Main
         }
         public override async Task<IStatusGeneric> UpdateAsync<TId>(TId id, AttributeUpdateModel updateModel)
         {
+            if(!await CanModify()) return this; 
+
             var result = await base.UpdateAsync(id, updateModel);
             if (!result.IsValid) return result;
 

@@ -21,9 +21,6 @@ namespace ProjectDefense.Service.Main.Base
         protected readonly IBaseRepository<TEntity> _repository;
         protected readonly IUserHelper _userHelper;
 
-
-        
-
         protected BaseMainService(IBaseRepository<TEntity> repository, IUserHelper userHelper)
         {
             _repository = repository;
@@ -33,7 +30,7 @@ namespace ProjectDefense.Service.Main.Base
         protected abstract IQueryable<TEntity> GetAllQuery();
         protected abstract IQueryable<TEntity> ApplyFilter(IQueryable<TEntity> query, TFilterOptions options);
         protected abstract TEntity BuildNewEntity(TCreateModel createModel, Guid userId);
-        protected abstract Task<bool> CanModify(TEntity entity, Guid userId);
+        protected abstract Task<bool> CanModify(TEntity? entity, Guid? userId = null);
 
 
 
@@ -70,14 +67,14 @@ namespace ProjectDefense.Service.Main.Base
         public virtual async Task<IStatusGeneric> DeleteAsync<TId>(TId id)
         {
             var entity = await _repository.GetById(id);
-            if(entity == null)
+            if (entity == null)
             {
                 AddError("Entity not found");
                 return this;
             }
 
             var userId = _userHelper.GetUserId();
-            if (userId == null || !await CanModify(entity, userId.Value))
+            if (userId == null || !await CanModify(entity, userId))
             {
                 AddError("You can't change that entity");
                 return this;
@@ -96,19 +93,20 @@ namespace ProjectDefense.Service.Main.Base
         public virtual async Task<IStatusGeneric> UpdateAsync<TId>(TId id, TUpdateModel updateModel)
         {
             var entity = await _repository.GetById(id);
-            if(entity == null)
+            if (entity == null)
             {
                 AddError("Not found.");
                 return this;
             }
 
             var userId = _userHelper.GetUserId();
-            if (userId == null || !await CanModify(entity, userId.Value))
+            if (userId == null || !await CanModify(entity, userId))
             {
-                AddError("You are'nt allowed to edit this");
+                AddError("You aren't allowed to edit this");
                 return this;
             }
-            if(!VersionMatches(entity, updateModel))
+
+            if (!VersionMatches(entity, updateModel))
             {
                 AddError("This was changed elsewhere reload");
                 return this;

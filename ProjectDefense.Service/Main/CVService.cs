@@ -33,11 +33,18 @@ namespace ProjectDefense.Service.Main
             StatusCode = CVStatusConstants.DraftStatusCode
         };
 
-        protected override async Task<bool> CanModify(CV entity, Guid userId)
+        protected override async Task<bool> CanModify(CV? cv = null, Guid? userId = null)
         {
-            if (entity.UserId == userId) return true;
-            return await unitOfWork.UserRoleRepository().GetAll()
+            userId ??= _userHelper.GetUserId();
+            if (userId == null) { AddError("You are not logged in"); return false; }
+
+            bool isOwner = cv != null && cv.CreatedUserId == userId;
+            bool isAdmin = await unitOfWork.UserRoleRepository().GetAll()
                 .AnyAsync(ur => ur.UserId == userId && ur.RoleCode == RoleConstants.Administrator);
+
+            bool check = isOwner || isAdmin;
+            if (!check) AddError("You are not allowed to do this action");
+            return check;
         }
 
         public override async Task<TId?> AddAsync<TId>(CvCreateModel createModel)
@@ -60,11 +67,7 @@ namespace ProjectDefense.Service.Main
             if (cv == null) { AddError("CV not found."); return this; }
 
             var userId = _userHelper.GetUserId();
-            if (userId == null || !await CanModify(cv, userId.Value))
-            {
-                AddError("You're not allowed to publish this CV.");
-                return this;
-            }
+            if (!await CanModify(cv, userId)) return this;
 
             var missingCount = await CountMissingAttributes(cv.PositionId, cv.UserId);
             if (missingCount > 0)
