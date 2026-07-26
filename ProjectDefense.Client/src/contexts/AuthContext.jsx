@@ -5,6 +5,8 @@ import authApi from '../api/authApi';
 
 const AuthContext = createContext(null);
 
+const HUB_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '');
+
 function buildUserFromToken(token) {
   const decoded = jwtDecode(token);
   const rawRoles = decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
@@ -27,12 +29,26 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
+  // rehydrate the session from a stored token on first load, so a page refresh
+  // doesn't silently log the user out even though their JWT is still valid
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      try {
+        setUser(buildUserFromToken(token));
+      } catch {
+        localStorage.removeItem('accessToken');
+      }
+    }
+    setIsLoading(false);
+  }, []);
+
   useEffect(() => {
     if (!isAuthenticated) return;
 
     const token = localStorage.getItem('accessToken');
     const connection = new signalR.HubConnectionBuilder()
-      .withUrl(`${import.meta.env.VITE_API_URL}/hubs/notifications?access_token=${token}`)
+      .withUrl(`${HUB_BASE_URL}/hubs/notifications?access_token=${token}`)
       .withAutomaticReconnect()
       .build();
 
