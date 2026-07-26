@@ -16,7 +16,7 @@ namespace ProjectDefense.Api.Middlewares
                 if (userId != null) {
                     var user = await unitOfWork.UserRepository().GetById(userId);
                     if (user != null && user.StatusCode == UserStatusConstants.BlockedStatusCode) {
-                        context.Response.StatusCode = UserStatusConstants.BlockedStatusCode;
+                        context.Response.StatusCode = StatusCodes.Status403Forbidden;
                         await context.Response.WriteAsJsonAsync(new { message = "Your account has been blocked by admin" });
 
                         return;
