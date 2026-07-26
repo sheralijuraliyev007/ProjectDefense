@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using ProjectDefense.Api.Hubs;
 using ProjectDefense.Api.Middlewares;
 using ProjectDefense.Common.Mapping;
 using ProjectDefense.Common.Settings.Cloudinary;
@@ -21,6 +20,7 @@ using ProjectDefense.Service.Auth;
 using ProjectDefense.Service.Auth.Interfaces;
 using ProjectDefense.Service.Common;
 using ProjectDefense.Service.Common.Interfaces;
+using ProjectDefense.Service.Hubs;
 using ProjectDefense.Service.Infrastructure;
 using ProjectDefense.Service.Infrastructure.Interfaces;
 using ProjectDefense.Service.Main;
@@ -31,7 +31,7 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ---- MVC / Swagger / SignalR ----
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -128,7 +128,22 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = jwtSettings.Audience,
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
-            ValidateLifetime = true
+            ValidateLifetime = true,
+            
+            
+        };
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
         };
     });
 
@@ -165,5 +180,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<DiscussionHub>("/hubs/discussion");
+app.MapHub<UserNotificationHub>("/hubs/notifications");
 
 app.Run();

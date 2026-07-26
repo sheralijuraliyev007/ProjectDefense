@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using ProjectDefense.Common.Constants;
 using ProjectDefense.Common.DTOs.User;
 using ProjectDefense.Common.Extensions;
@@ -9,11 +10,12 @@ using ProjectDefense.Data.Repositories.Interfaces;
 using ProjectDefense.Service.Admin.Users.Interfaces;
 using ProjectDefense.Service.Admin.Users.QueryObjects;
 using ProjectDefense.Service.Common.Interfaces;
+using ProjectDefense.Service.Hubs;
 using StatusGeneric;
 
 namespace ProjectDefense.Service.Admin.Users
 {
-    public class AdminUserService(IUnitOfWork unitOfWork, IUserHelper userHelper) : StatusGenericHandler, IAdminUserService
+    public class AdminUserService(IUnitOfWork unitOfWork, IUserHelper userHelper, IHubContext<UserNotificationHub> hubContext) : StatusGenericHandler, IAdminUserService
     {
 
         public async Task<UserDtoForAdmin?> GetByIdAsync(Guid userId)
@@ -56,6 +58,8 @@ namespace ProjectDefense.Service.Admin.Users
 
             unitOfWork.UserRoleRepository().AddRange(toAssign);
             await unitOfWork.SaveChanges();
+
+            await NotifyRolesChanged(toAssign.Select(ur => ur.UserId));
             return this;
         }
 
@@ -71,6 +75,8 @@ namespace ProjectDefense.Service.Admin.Users
 
             unitOfWork.UserRoleRepository().DeleteRange(toRemove);
             await unitOfWork.SaveChanges();
+
+            await NotifyRolesChanged(toRemove.Select(ur => ur.UserId));
             return this;
         }
 
@@ -131,6 +137,12 @@ namespace ProjectDefense.Service.Admin.Users
         {
             var callerId = userHelper.GetUserId();
             return callerId != null && userIds.Contains(callerId.Value);
+        }
+
+        private async Task NotifyRolesChanged(IEnumerable<Guid> userIds)
+        {
+            foreach (var userId in userIds.Distinct())
+                await hubContext.Clients.User(userId.ToString()).SendAsync("RolesChanged");
         }
     }
 }

@@ -9,6 +9,8 @@ using ProjectDefense.Common.Models.Auth;
 using ProjectDefense.Data.Entities.MainEntities;
 using ProjectDefense.Data.Repositories.Interfaces;
 using ProjectDefense.Service.Auth.Interfaces;
+using ProjectDefense.Service.Common;
+using ProjectDefense.Service.Common.Interfaces;
 using ProjectDefense.Service.Infrastructure.Interfaces;
 using StatusGeneric;
 
@@ -18,7 +20,8 @@ namespace ProjectDefense.Service.Auth
         IUnitOfWork unitOfWork,
         IEnumerable<ISocialLoginProvider> socialLoginProviders,
         IJwtService jwtService,
-        IEmailService emailService) : StatusGenericHandler, IAuthService
+        IEmailService emailService,
+        IUserHelper userHelper) : StatusGenericHandler, IAuthService
     {
 
 
@@ -244,6 +247,19 @@ namespace ProjectDefense.Service.Auth
             bool check = user.StatusCode == UserStatusConstants.ActiveStatusCode;
             if (!check) AddError("You are blocked");
             return check;
+        }
+
+        public async Task<UserDto?> GetCurrentUserAsync()
+        {
+            var userId = userHelper.GetUserId();
+            if (userId == null) return null;
+
+            var user = await unitOfWork.UserRepository()
+                .GetAll(u => u.Status!)
+                .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            return user?.MapToDto<User, UserDto>(_config);
         }
     }
 }

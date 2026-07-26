@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 
-namespace ProjectDefense.Api.Hubs
+namespace ProjectDefense.Service.Hubs
 {
     public class DiscussionHub : Hub
     {

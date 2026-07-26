@@ -12,5 +12,7 @@ namespace ProjectDefense.Service.Auth.Interfaces
         Task<TokenDto?> SocialLoginAsync(SocialLoginModel model);
         Task<IStatusGeneric> VerifyEmail(Guid verificationToken);
         Task<IStatusGeneric> ResendVerificationEmailAsync(string email);
+
+        Task<UserDto?> GetCurrentUserAsync();
     }
 }

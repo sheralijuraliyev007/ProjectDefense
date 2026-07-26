@@ -21,16 +21,23 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      try {
-        setUser(buildUserFromToken(token));
-      } catch {
-        localStorage.removeItem('accessToken');
-      }
-    }
-    setIsLoading(false);
-  }, []);
+  if (!isAuthenticated) return;
+
+  const token = localStorage.getItem('accessToken');
+  const connection = new signalR.HubConnectionBuilder()
+    .withUrl(`${import.meta.env.VITE_API_URL}/hubs/notifications?access_token=${token}`)
+    .withAutomaticReconnect()
+    .build();
+
+  connection.on('RolesChanged', () => {
+    logout();
+    window.location.href = '/login';
+  });
+
+  connection.start().catch(console.error);
+
+  return () => { connection.stop(); };
+}, [isAuthenticated]);
 
   const login = useCallback(async (credentials) => {
     const response = await authApi.login(credentials);

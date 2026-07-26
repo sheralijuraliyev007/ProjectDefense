@@ -51,5 +51,13 @@ namespace ProjectDefense.Api.Controllers
             var result = await authService.ResendVerificationEmailAsync(email);
             return result.IsValid ? Ok(new ApiResponse<string> { Data = "Sent." }) : BadRequest(result.Errors);
         }
+
+        [HttpGet("me")]
+        [Authorize]
+        public async Task<IActionResult> Me()
+        {
+            var result = await authService.GetCurrentUserAsync();
+            return result != null ? Ok(new ApiResponse<UserDto> { Data = result }) : Unauthorized();
+        }
     }
 }
