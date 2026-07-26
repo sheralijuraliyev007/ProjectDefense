@@ -1,11 +1,11 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using ProjectDefense.Api.Hubs;
 using ProjectDefense.Common.DTOs.Main;
 using ProjectDefense.Common.Models.Main.DiscussionMessage;
 using ProjectDefense.Data.Entities.MainEntities;
 using ProjectDefense.Data.Repositories.Interfaces;
 using ProjectDefense.Service.Common.Interfaces;
+using ProjectDefense.Service.Hubs;
 using ProjectDefense.Service.Main.Interfaces;
 using StatusGeneric;
 
