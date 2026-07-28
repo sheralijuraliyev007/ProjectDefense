@@ -29,8 +29,6 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
-  // rehydrate the session from a stored token on first load, so a page refresh
-  // doesn't silently log the user out even though their JWT is still valid
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     if (token) {
