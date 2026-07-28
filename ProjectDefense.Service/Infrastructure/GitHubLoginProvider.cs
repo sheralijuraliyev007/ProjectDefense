@@ -15,7 +15,7 @@ namespace ProjectDefense.Service.Infrastructure
         private readonly GitHubAuthSettings _settings = options.Value;
         public string ProviderName => "GitHub";
 
-        // NOTE: for GitHub, "idToken" is actually the OAuth "code" from the redirect callback
+        
         public async Task<SocialUserInfoDto> ValidateTokenAsync(string idToken)
         {
             var client = httpClientFactory.CreateClient();
@@ -27,7 +27,7 @@ namespace ProjectDefense.Service.Infrastructure
             {
                 Email = email ?? throw new InvalidOperationException("GitHub account has no accessible email."),
                 ExternalId = profile.Id.ToString(),
-                EmailVerified = true, // only verified emails are returned by the emails endpoint
+                EmailVerified = true, 
                 FirstName = SplitName(profile.Name).first,
                 LastName = SplitName(profile.Name).last
             };
