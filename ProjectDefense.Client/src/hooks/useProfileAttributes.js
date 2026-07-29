@@ -1,47 +1,103 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import cvApi from '../api/cvApi';
+import userAttributeApi from '../api/userAttributeApi';
 import attributeApi from '../api/attributeApi';
 import contentApi from '../api/contentApi';
-import { DTYPE, buildValuePayload } from './useProfileAttributes';
-import userAttributeApi from '../api/userAttributeApi';
 
-const AUTO_SAVE_INTERVAL_MS = 7000;
+export const DTYPE = {
+  STRING: 1, TEXT: 2, IMAGE: 3, NUMERIC: 4, DATE: 5, PERIOD: 6, BOOLEAN: 7, ONE_OF_MANY: 8,
+};
 
-export function useCvAttributes(cvId) {
-  const [attributes, setAttributes] = useState([]);
-  const [attributeMeta, setAttributeMeta] = useState([]);
+const AUTO_SAVE_INTERVAL_MS = 7000; 
+
+export function buildValuePayload(attributeId, dtypeCode, rawValue, version) {
+  const base = { attributeId, version };
+  switch (dtypeCode) {
+    case DTYPE.STRING:
+    case DTYPE.TEXT:
+      return { ...base, valueGeneric: rawValue };
+    case DTYPE.NUMERIC:
+      return { ...base, valueNumeric: rawValue === '' ? null : Number(rawValue) };
+    case DTYPE.DATE:
+      return { ...base, valueDate: rawValue || null };
+    case DTYPE.BOOLEAN:
+      return { ...base, valueBoolean: !!rawValue };
+    case DTYPE.PERIOD:
+      return { ...base, valuePeriodStart: rawValue?.start || null, valuePeriodEnd: rawValue?.end || null };
+    case DTYPE.ONE_OF_MANY:
+      return { ...base, valueOptionId: rawValue ? Number(rawValue) : null };
+    case DTYPE.IMAGE:
+      return { ...base, valueContentId: rawValue ? Number(rawValue) : null };
+    default:
+      return base;
+  }
+}
+
+export function readValue(attr) {
+  switch (attr.dtypeCode) {
+    case DTYPE.STRING:
+    case DTYPE.TEXT:
+      return attr.valueGeneric ?? '';
+    case DTYPE.NUMERIC:
+      return attr.valueNumeric ?? '';
+    case DTYPE.DATE:
+      return attr.valueDate ? attr.valueDate.slice(0, 10) : '';
+    case DTYPE.PERIOD:
+      return {
+        start: attr.valuePeriodStart ? attr.valuePeriodStart.slice(0, 10) : '',
+        end: attr.valuePeriodEnd ? attr.valuePeriodEnd.slice(0, 10) : '',
+      };
+    case DTYPE.BOOLEAN:
+      return !!attr.valueBoolean;
+    case DTYPE.ONE_OF_MANY:
+      return attr.valueOptionId ?? '';
+    case DTYPE.IMAGE:
+      return attr.valueContentId ?? '';
+    default:
+      return '';
+  }
+}
+
+export function useProfileAttributes(targetUserId) {
+  const [myAttributes, setMyAttributes] = useState([]);
+  const [availableAttributes, setAvailableAttributes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [savingIds, setSavingIds] = useState(new Set());
   const [conflictIds, setConflictIds] = useState(new Set());
   const [imageErrors, setImageErrors] = useState({});
+
   const dirtyRef = useRef(new Map());
 
-  const load = useCallback(async () => {
+  const loadMyAttributes = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await cvApi.getAttributes(cvId);
-      const rows = res.data.data ?? [];
-      setAttributes(rows);
-
-      const ids = rows.map((a) => a.attributeId);
-      if (ids.length > 0) {
-        const metaRes = await attributeApi.getByIds(ids);
-        setAttributeMeta(metaRes.data.data ?? []);
-      } else {
-        setAttributeMeta([]);
-      }
+      const res = await userAttributeApi.getMine(targetUserId);
+      setMyAttributes(res.data.data ?? []);
     } finally {
       setIsLoading(false);
     }
-  }, [cvId]);
+  }, [targetUserId]);
 
-  useEffect(() => { load(); }, [load]);
+  const loadAvailableAttributes = useCallback(async () => {
+    const res = await attributeApi.search({ page: 1, pageSize: 200 });
+    setAvailableAttributes(res.data.data?.rows ?? []);
+  }, []);
 
+  useEffect(() => {
+    loadMyAttributes();
+    loadAvailableAttributes();
+  }, [loadMyAttributes, loadAvailableAttributes]);
+
+  const meAttributes = useMemo(() => myAttributes.filter((a) => !a.isRemovable), [myAttributes]);
+  const infoAttributes = useMemo(() => myAttributes.filter((a) => a.isRemovable), [myAttributes]);
+  const addableAttributes = useMemo(
+    () => availableAttributes.filter((a) => !myAttributes.some((m) => m.attributeId === a.id)),
+    [availableAttributes, myAttributes]
+  );
   const attributeMetaById = useMemo(() => {
     const map = new Map();
-    attributeMeta.forEach((a) => map.set(a.id, a));
+    availableAttributes.forEach((a) => map.set(a.id, a));
     return map;
-  }, [attributeMeta]);
+  }, [availableAttributes]);
 
   const markDirty = useCallback((attr, rawValue) => {
     dirtyRef.current.set(attr.attributeId, { attr, rawValue });
@@ -64,7 +120,7 @@ export function useCvAttributes(cvId) {
       setSavingIds((prev) => new Set(prev).add(attributeId));
       try {
         const payload = buildValuePayload(attributeId, attr.dtypeCode, rawValue, attr.version);
-        await userAttributeApi.setValue(payload);
+        await userAttributeApi.setValue(payload, targetUserId);
       } catch (err) {
         if (err.response?.status === 409) {
           setConflictIds((prev) => new Set(prev).add(attributeId));
@@ -77,16 +133,28 @@ export function useCvAttributes(cvId) {
         });
       }
     }
-    await load();
-  }, [load]);
+    await loadMyAttributes();
+  }, [loadMyAttributes, targetUserId]);
 
   useEffect(() => {
     const id = setInterval(flushDirty, AUTO_SAVE_INTERVAL_MS);
     return () => {
       clearInterval(id);
-      flushDirty();
+      flushDirty(); 
     };
   }, [flushDirty]);
+
+  const addAttribute = useCallback(async (attributeIdStr) => {
+    const attributeId = Number(attributeIdStr);
+    if (!attributeId) return;
+    await userAttributeApi.add(attributeId, targetUserId);
+    await loadMyAttributes();
+  }, [targetUserId, loadMyAttributes]);
+
+  const removeAttributes = useCallback(async (attributeIds) => {
+    await Promise.all(attributeIds.map((id) => userAttributeApi.remove(id, targetUserId)));
+    await loadMyAttributes();
+  }, [targetUserId, loadMyAttributes]);
 
   const uploadImage = useCallback(async (attr, file) => {
     if (!file) return;
@@ -120,12 +188,12 @@ export function useCvAttributes(cvId) {
       const content = confirmRes.data.data;
 
       const payload = buildValuePayload(attributeId, DTYPE.IMAGE, content.id, attr.version);
-      await userAttributeApi.setValue(payload);
-      await load();
+      await userAttributeApi.setValue(payload, targetUserId);
+      await loadMyAttributes();
     } catch (err) {
       if (err.response?.status === 409) {
         setConflictIds((prev) => new Set(prev).add(attributeId));
-        await load();
+        await loadMyAttributes();
       } else {
         setImageErrors((prev) => ({ ...prev, [attributeId]: err.message || 'Could not upload image.' }));
       }
@@ -136,17 +204,21 @@ export function useCvAttributes(cvId) {
         return next;
       });
     }
-  }, [load]);
+  }, [targetUserId, loadMyAttributes]);
 
   return {
-    attributes,
-    attributeMetaById,
     isLoading,
+    meAttributes,
+    infoAttributes,
+    addableAttributes,
+    attributeMetaById,
     savingIds,
     conflictIds,
     imageErrors,
     markDirty,
     getPendingValue,
+    addAttribute,
+    removeAttributes,
     uploadImage,
   };
 }
