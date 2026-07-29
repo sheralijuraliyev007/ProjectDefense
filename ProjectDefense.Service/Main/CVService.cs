@@ -119,6 +119,7 @@ namespace ProjectDefense.Service.Main
             AttributeId = ua.AttributeId,
             AttributeName = ua.Attribute?.Name ?? string.Empty,
             DtypeCode = ua.Attribute?.DtypeCode ?? 0,
+            Version = ua.Version,   
             ValueGeneric = ua.ValueGeneric,
             ValueNumeric = ua.ValueNumeric,
             ValueDate = ua.ValueDate,
@@ -129,7 +130,7 @@ namespace ProjectDefense.Service.Main
             ValueOptionLabel = ua.ValueOption?.Label,
             ValueContentId = ua.ValueContentId,
             IsFilled = ua.ValueGeneric != null || ua.ValueNumeric != null || ua.ValueDate != null
-                       || ua.ValueBoolean != null || ua.ValueOptionId != null || ua.ValueContentId != null
+               || ua.ValueBoolean != null || ua.ValueOptionId != null || ua.ValueContentId != null
         };
 
         private async Task<int> CountMissingAttributes(int positionId, Guid userId)
