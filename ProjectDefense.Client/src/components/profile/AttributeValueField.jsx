@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Input, Spinner } from '@heroui/react';
 import { PhotoIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
@@ -7,6 +8,49 @@ const inputClasses = 'border border-default-300 bg-content1 rounded-lg focus-wit
 
 function ConflictNote() {
   return <p className="text-warning text-xs mt-1">This was changed elsewhere — refreshed from server.</p>;
+}
+
+// The Period field needs its own local state for {start, end}, instead of
+// relying on the parent's `pendingValue`. markDirty (in useProfileAttributes)
+// stores edits in a ref, which doesn't trigger a re-render — so if we merged
+// against `pendingValue` on every keystroke, the second date picked would
+// overwrite the first with a stale value, silently dropping it. Keeping the
+// merged {start, end} in local state here means each edit always merges
+// against what the user actually just picked, not a possibly-stale prop.
+function PeriodField({ attr, initialValue, isSaving, hasConflict, onChange }) {
+  const [period, setPeriod] = useState(initialValue);
+
+  const updatePeriod = (patch) => {
+    const next = { ...period, ...patch };
+    setPeriod(next);
+    onChange(next);
+  };
+
+  return (
+    <div className="flex gap-2 items-center">
+      <Input
+        key={`${attr.attributeId}-${attr.version}-start`}
+        type="date"
+        size="sm"
+        variant="bordered"
+        classNames={{ inputWrapper: inputClasses }}
+        value={period.start}
+        onChange={(e) => { if (e.target.value) updatePeriod({ start: e.target.value }); }}
+      />
+      <span className="text-default-400 text-sm">to</span>
+      <Input
+        key={`${attr.attributeId}-${attr.version}-end`}
+        type="date"
+        size="sm"
+        variant="bordered"
+        classNames={{ inputWrapper: inputClasses }}
+        value={period.end}
+        onChange={(e) => { if (e.target.value) updatePeriod({ end: e.target.value }); }}
+      />
+      {isSaving && <Spinner size="sm" />}
+      {hasConflict && <ConflictNote />}
+    </div>
+  );
 }
 
 export default function AttributeValueField({
@@ -123,34 +167,16 @@ export default function AttributeValueField({
       );
     }
 
-    case DTYPE.PERIOD: {
-      const period = pendingValue ?? currentValue;
+    case DTYPE.PERIOD:
       return (
-        <div className="flex gap-2 items-center">
-          <Input
-            key={`${attr.attributeId}-${attr.version}-start`}
-            type="date"
-            size="sm"
-            variant="bordered"
-            classNames={{ inputWrapper: inputClasses }}
-            defaultValue={period.start}
-            onChange={(e) => { if (e.target.value) onChange({ ...period, start: e.target.value }); }}
-          />
-          <span className="text-default-400 text-sm">to</span>
-          <Input
-            key={`${attr.attributeId}-${attr.version}-end`}
-            type="date"
-            size="sm"
-            variant="bordered"
-            classNames={{ inputWrapper: inputClasses }}
-            defaultValue={period.end}
-            onChange={(e) => { if (e.target.value) onChange({ ...period, end: e.target.value }); }}
-          />
-          {isSaving && <Spinner size="sm" />}
-          {hasConflict && <ConflictNote />}
-        </div>
+        <PeriodField
+          attr={attr}
+          initialValue={currentValue}
+          isSaving={isSaving}
+          hasConflict={hasConflict}
+          onChange={onChange}
+        />
       );
-    }
 
     default:
       return (

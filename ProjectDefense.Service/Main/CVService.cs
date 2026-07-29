@@ -69,12 +69,20 @@ namespace ProjectDefense.Service.Main
             var userId = _userHelper.GetUserId();
             if (!await CanModify(cv, userId)) return this;
 
+            if (cv.StatusCode == CVStatusConstants.PublishedStatusCode)
+            {
+                AddError("This CV is already published.");
+                return this;
+            }
+
             var missingCount = await CountMissingAttributes(cv.PositionId, cv.UserId);
             if (missingCount > 0)
             {
                 AddError($"Fill out {missingCount} more attribute(s) before publishing.");
                 return this;
             }
+
+            await SnapshotAttributesAsync(cv);
 
             cv.StatusCode = CVStatusConstants.PublishedStatusCode;
             cv.ModifiedUserId = userId;
@@ -83,18 +91,77 @@ namespace ProjectDefense.Service.Main
             return this;
         }
 
-        
+        private async Task SnapshotAttributesAsync(CV cv)
+        {
+            var requiredAttributeIds = await GetRequiredAttributeIds(cv.PositionId);
+
+            var liveValues = await unitOfWork.UserAttributeRepository().GetAll()
+                .Where(ua => ua.UserId == cv.UserId && requiredAttributeIds.Contains(ua.AttributeId))
+                .ToListAsync();
+
+            var snapshotRows = liveValues.Select(ua => new CVAttribute
+            {
+                CVId = cv.Id,
+                AttributeId = ua.AttributeId,
+                ValueGeneric = ua.ValueGeneric,
+                ValueNumeric = ua.ValueNumeric,
+                ValueDate = ua.ValueDate,
+                ValuePeriodStart = ua.ValuePeriodStart,
+                ValuePeriodEnd = ua.ValuePeriodEnd,
+                ValueBoolean = ua.ValueBoolean,
+                ValueOptionId = ua.ValueOptionId,
+                ValueContentId = ua.ValueContentId,
+            }).ToList();
+
+            unitOfWork.CVAttributeRepository().AddRange(snapshotRows);
+            await unitOfWork.CVAttributeRepository().SaveChanges();
+        }
+
+
 
         public async Task<List<UserAttributeDto>> GetCvAttributesAsync(long cvId)
         {
             var cv = await _repository.GetById(cvId);
             if (cv == null) { AddError("CV not found."); return []; }
 
-            var requiredAttributeIds = await GetRequiredAttributeIds(cv.PositionId);
-            var values = await GetAttributeValues(cv.UserId, requiredAttributeIds);
+            if (cv.StatusCode == CVStatusConstants.PublishedStatusCode)
+                return await GetSnapshotAttributeValues(cvId);
 
-            return values;
+            var requiredAttributeIds = await GetRequiredAttributeIds(cv.PositionId);
+            return await GetAttributeValues(cv.UserId, requiredAttributeIds);
         }
+
+        private async Task<List<UserAttributeDto>> GetSnapshotAttributeValues(long cvId)
+        {
+            var rows = await unitOfWork.CVAttributeRepository()
+                .GetAll(ca => ca.Attribute!, ca => ca.ValueOption!, ca => ca.ValueContent!)
+                .Where(ca => ca.CVId == cvId)
+                .ToListAsync();
+
+            return rows.Select(ToDtoFromSnapshot).ToList();
+        }
+
+        private static UserAttributeDto ToDtoFromSnapshot(CVAttribute ca) => new()
+        {
+            Id = (int)ca.Id,
+            AttributeId = ca.AttributeId,
+            AttributeName = ca.Attribute?.Name ?? string.Empty,
+            DtypeCode = ca.Attribute?.DtypeCode ?? 0,
+            Version = 0, 
+            ValueGeneric = ca.ValueGeneric,
+            ValueNumeric = ca.ValueNumeric,
+            ValueDate = ca.ValueDate,
+            ValuePeriodStart = ca.ValuePeriodStart,
+            ValuePeriodEnd = ca.ValuePeriodEnd,
+            ValueBoolean = ca.ValueBoolean,
+            ValueOptionId = ca.ValueOptionId,
+            ValueOptionLabel = ca.ValueOption?.Label,
+            ValueContentId = ca.ValueContentId,
+            ValueContentUrl = ca.ValueContent?.SecureUrl,
+            IsFilled = ca.ValueGeneric != null || ca.ValueNumeric != null || ca.ValueDate != null
+                       || ca.ValueBoolean != null || ca.ValueOptionId != null || ca.ValueContentId != null,
+            IsRemovable = false 
+        };
 
         private Task<List<int>> GetRequiredAttributeIds(int positionId) =>
             unitOfWork.PositionAttributeRepository()
