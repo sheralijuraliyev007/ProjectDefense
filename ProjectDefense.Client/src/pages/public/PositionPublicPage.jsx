@@ -2,9 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Card, CardBody, Chip, Button, Spinner } from '@heroui/react';
-import { LockClosedIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
+import { LockClosedIcon, ArrowLeftIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import positionApi from '../../api/positionApi';
+import cvApi from '../../api/cvApi';
 import { useAuth } from '../../contexts/AuthContext';
+import { useCvStatusCodes } from '../../hooks/useCvStatusCodes';
+
 
 function PositionListView() {
   const { t } = useTranslation();
@@ -17,7 +20,7 @@ function PositionListView() {
       setIsLoading(true);
       try {
         const res = await positionApi.search({ page: 1, pageSize: 50 });
-        
+
         setPositions(res.data.data?.rows ?? []);
       } finally {
         setIsLoading(false);
@@ -52,16 +55,19 @@ function PositionListView() {
     </div>
   );
 }
-
 function PositionSingleView({ id }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, hasRole } = useAuth();
+  const { published: publishedStatusCode } = useCvStatusCodes();
 
   const [position, setPosition] = useState(null);
   const [attributes, setAttributes] = useState([]);
+  const [myCv, setMyCv] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [createError, setCreateError] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -74,17 +80,35 @@ function PositionSingleView({ id }) {
 
       const attrsRes = await positionApi.getAttributes(id);
       setAttributes(attrsRes.data.data ?? []);
+
+      if (isAuthenticated && hasRole(['Candidate'])) {
+        const cvRes = await cvApi.search({ page: 1, pageSize: 1, positionId: Number(id) });
+        const existing = cvRes.data.data?.rows?.[0];
+        setMyCv(existing ?? null);
+      }
     } catch (err) {
-      // 404 (or the backend's access-control "Not found") both land here
       setNotFound(true);
     } finally {
       setIsLoading(false);
     }
-  }, [id]);
+  }, [id, isAuthenticated, hasRole]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  const handleCreateCv = async () => {
+    setCreateError('');
+    setIsCreating(true);
+    try {
+      const res = await cvApi.create({ positionId: Number(id) });
+      navigate(`/candidate/cv/${res.data.data}/edit`);
+    } catch (err) {
+      setCreateError(err.response?.data?.errors?.[0] || 'Could not create a CV for this position.');
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   if (isLoading) return <div className="flex justify-center p-12"><Spinner size="lg" /></div>;
 
@@ -116,12 +140,27 @@ function PositionSingleView({ id }) {
             {position.isPublic ? t('positions.public') : t('positions.restricted')}
           </Chip>
         </div>
+
         {!isAuthenticated && (
           <Button color="primary" startContent={<LockClosedIcon className="w-4 h-4" />} onPress={() => navigate('/login')}>
             Login to Apply
           </Button>
         )}
+
+        {isAuthenticated && hasRole(['Candidate']) && myCv && (
+          <Button color="primary" startContent={<DocumentTextIcon className="w-4 h-4" />} onPress={() => navigate(`/candidate/cv/${myCv.id}/edit`)}>
+            {myCv.statusCode === publishedStatusCode ? 'View your CV' : 'Continue your CV'}
+          </Button>
+        )}
+
+        {isAuthenticated && hasRole(['Candidate']) && !myCv && (
+          <Button color="primary" isLoading={isCreating} onPress={handleCreateCv}>
+            Create CV for this position
+          </Button>
+        )}
       </div>
+
+      {createError && <p className="text-danger text-sm">{createError}</p>}
 
       <Card>
         <CardBody className="space-y-4">

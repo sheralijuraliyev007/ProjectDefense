@@ -204,7 +204,7 @@ namespace ProjectDefense.Service.Main
 
         private static UserAttributeDto ToDto(UserAttribute ua)
         {
-            Console.WriteLine($"DEBUG: ua.Id={ua.Id} attrId={ua.AttributeId} attrName={ua.Attribute?.Name} attrIsRemovable={ua.Attribute?.IsRemovable} (Attribute null? {ua.Attribute is null})");
+            //Console.WriteLine($"DEBUG: ua.Id={ua.Id} attrId={ua.AttributeId} attrName={ua.Attribute?.Name} attrIsRemovable={ua.Attribute?.IsRemovable} (Attribute null? {ua.Attribute is null})");
             return new()
             {
                 Id = ua.Id,

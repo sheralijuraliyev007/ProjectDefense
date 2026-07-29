@@ -9,7 +9,7 @@ export const DTYPE = {
 
 const AUTO_SAVE_INTERVAL_MS = 7000; 
 
-function buildValuePayload(attributeId, dtypeCode, rawValue, version) {
+export function buildValuePayload(attributeId, dtypeCode, rawValue, version) {
   const base = { attributeId, version };
   switch (dtypeCode) {
     case DTYPE.STRING:
