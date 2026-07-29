@@ -10,13 +10,6 @@ function ConflictNote() {
   return <p className="text-warning text-xs mt-1">This was changed elsewhere — refreshed from server.</p>;
 }
 
-// The Period field needs its own local state for {start, end}, instead of
-// relying on the parent's `pendingValue`. markDirty (in useProfileAttributes)
-// stores edits in a ref, which doesn't trigger a re-render — so if we merged
-// against `pendingValue` on every keystroke, the second date picked would
-// overwrite the first with a stale value, silently dropping it. Keeping the
-// merged {start, end} in local state here means each edit always merges
-// against what the user actually just picked, not a possibly-stale prop.
 function PeriodField({ attr, initialValue, isSaving, hasConflict, onChange }) {
   const [period, setPeriod] = useState(initialValue);
 
