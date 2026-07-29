@@ -8,4 +8,5 @@ export default {
   delete: (id) => api.delete(`/attribute/${id}`),
   searchByPrefix: (prefix, limit = 10) => 
     api.get('/attribute/searchByPrefix', { params: { prefix, limit } }),
+  getByIds: (attributeIds) => api.post('/attribute/byIds', attributeIds),
 };

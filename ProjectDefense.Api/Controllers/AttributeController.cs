@@ -16,5 +16,12 @@ namespace ProjectDefense.Api.Controllers
             var result = await service.SearchByPrefixAsync(prefix, limit);
             return Ok(new ApiResponse<List<AttributeDto>> { Data = result });
         }
+
+        [HttpPost("byIds")]
+        public async Task<IActionResult> GetByIds([FromBody] List<int> attributeIds)
+        {
+            var result = await service.GetByIdsAsync(attributeIds);
+            return Ok(new ApiResponse<List<AttributeDto>> { Data = result });
+        }
     }
 }

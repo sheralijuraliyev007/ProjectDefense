@@ -16,7 +16,17 @@ export default function CVEditPage() {
   const [publishError, setPublishError] = useState('');
   const [isPublishing, setIsPublishing] = useState(false);
 
-  const { attributes, isLoading, savingIds, conflictIds, markDirty, getPendingValue } = useCvAttributes(cvId);
+  const {
+  attributes,
+  attributeMetaById,
+  isLoading,
+  savingIds,
+  conflictIds,
+  imageErrors,
+  markDirty,
+  getPendingValue,
+  uploadImage,
+} = useCvAttributes(cvId);
   const { published: publishedStatusCode } = useCvStatusCodes();
 
   useEffect(() => {
@@ -31,12 +41,22 @@ export default function CVEditPage() {
       const res = await cvApi.getById(cvId);
       setCv(res.data.data);
     } catch (err) {
-      const msg = err.response?.data?.errors?.[0] || 'Could not publish this CV.';
-      setPublishError(msg);
-    } finally {
+      setPublishError(extractErrorMessage(err, t('cvs.publishFailed', 'Could not publish this CV.')));
+  }   
+    finally {
       setIsPublishing(false);
     }
   };
+
+  function extractErrorMessage(err, fallback) {
+  const errors = err.response?.data?.errors ?? err.response?.data;
+  if (Array.isArray(errors) && errors.length > 0) {
+    const first = errors[0];
+    if (typeof first === 'string') return first;
+    return first?.errorResult?.errorMessage ?? first?.errorMessage ?? first?.message ?? fallback;
+  }
+  return err.response?.data?.message || fallback;
+}
 
   const missingCount = attributes.filter((a) => !a.isFilled).length;
   const isPublished = cv?.statusCode === publishedStatusCode;
@@ -68,10 +88,13 @@ export default function CVEditPage() {
               <label className="text-sm font-medium text-default-700 mb-2 block">{attr.attributeName}</label>
               <AttributeValueField
                 attr={attr}
+                attributeMetaById={attributeMetaById}
                 isSaving={savingIds.has(attr.attributeId)}
                 hasConflict={conflictIds.has(attr.attributeId)}
+                imageError={imageErrors[attr.attributeId]}
                 pendingValue={getPendingValue(attr.attributeId)}
                 onChange={(rawValue) => markDirty(attr, rawValue)}
+                onImageUpload={(file) => uploadImage(attr, file)}
               />
               {!attr.isFilled && <p className="text-danger text-xs mt-2">{t('cvs.emptyField', 'Not filled in')}</p>}
             </div>
@@ -94,7 +117,7 @@ export default function CVEditPage() {
           </span>
         )}
         {publishError && <span className="text-danger text-sm">{publishError}</span>}
-        <Button variant="light" onPress={() => navigate('/candidate/my-cvs')}>
+        <Button variant="light" onPress={() => navigate('/profile/cvs')}>
           {t('common.back', 'Back')}
         </Button>
       </div>

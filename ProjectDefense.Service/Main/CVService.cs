@@ -58,7 +58,34 @@ namespace ProjectDefense.Service.Main
                 return default;
             }
 
-            return await base.AddAsync<TId>(createModel);
+            var id = await base.AddAsync<TId>(createModel);
+            if (id != null)
+                await EnsureRequiredAttributesExist(createModel.PositionId, userId.Value);
+
+            return id;
+        }
+
+        private async Task EnsureRequiredAttributesExist(int positionId, Guid userId)
+        {
+            var requiredAttributeIds = await GetRequiredAttributeIds(positionId);
+
+            var existingAttributeIds = await unitOfWork.UserAttributeRepository().GetAll()
+                .Where(ua => ua.UserId == userId && requiredAttributeIds.Contains(ua.AttributeId))
+                .Select(ua => ua.AttributeId)
+                .ToListAsync();
+
+            var missingAttributeIds = requiredAttributeIds.Except(existingAttributeIds).ToList();
+            if (missingAttributeIds.Count == 0) return;
+
+            var newRows = missingAttributeIds.Select(attrId => new UserAttribute
+            {
+                UserId = userId,
+                AttributeId = attrId,
+                CreatedUserId = userId
+            }).ToList();
+
+            unitOfWork.UserAttributeRepository().AddRange(newRows);
+            await unitOfWork.UserAttributeRepository().SaveChanges();
         }
 
         public async Task<IStatusGeneric> PublishAsync(long cvId)
@@ -159,7 +186,8 @@ namespace ProjectDefense.Service.Main
             ValueContentId = ca.ValueContentId,
             ValueContentUrl = ca.ValueContent?.SecureUrl,
             IsFilled = ca.ValueGeneric != null || ca.ValueNumeric != null || ca.ValueDate != null
-                       || ca.ValueBoolean != null || ca.ValueOptionId != null || ca.ValueContentId != null,
+           || ca.ValuePeriodStart != null || ca.ValuePeriodEnd != null
+           || ca.ValueBoolean != null || ca.ValueOptionId != null || ca.ValueContentId != null,
             IsRemovable = false 
         };
 
@@ -196,9 +224,7 @@ namespace ProjectDefense.Service.Main
             ValueOptionId = ua.ValueOptionId,
             ValueOptionLabel = ua.ValueOption?.Label,
             ValueContentId = ua.ValueContentId,
-            IsFilled = ua.ValueGeneric != null || ua.ValueNumeric != null || ua.ValueDate != null
-               || ua.ValuePeriodStart != null || ua.ValuePeriodEnd != null   // <-- add
-               || ua.ValueBoolean != null || ua.ValueOptionId != null || ua.ValueContentId != null
+            IsFilled = HasValue(ua)
         };
 
         private async Task<int> CountMissingAttributes(int positionId, Guid userId)
@@ -213,7 +239,8 @@ namespace ProjectDefense.Service.Main
         }
 
         private static bool HasValue(UserAttribute ua) =>
-            ua.ValueGeneric != null || ua.ValueNumeric != null || ua.ValueDate != null
-            || ua.ValueBoolean != null || ua.ValueOptionId != null || ua.ValueContentId != null;
+    ua.ValueGeneric != null || ua.ValueNumeric != null || ua.ValueDate != null
+    || ua.ValuePeriodStart != null || ua.ValuePeriodEnd != null
+    || ua.ValueBoolean != null || ua.ValueOptionId != null || ua.ValueContentId != null;
     }
 }

@@ -162,14 +162,15 @@ export default function AttributeValueField({
 
     case DTYPE.PERIOD:
       return (
-        <PeriodField
-          attr={attr}
-          initialValue={currentValue}
-          isSaving={isSaving}
-          hasConflict={hasConflict}
-          onChange={onChange}
-        />
-      );
+    <PeriodField
+      key={`${attr.attributeId}-${attr.version}`}
+      attr={attr}
+      initialValue={currentValue}
+      isSaving={isSaving}
+      hasConflict={hasConflict}
+      onChange={onChange}
+    />
+  );
 
     default:
       return (
