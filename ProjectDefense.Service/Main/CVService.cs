@@ -230,10 +230,12 @@ namespace ProjectDefense.Service.Main
         private async Task<int> CountMissingAttributes(int positionId, Guid userId)
         {
             var required = await GetRequiredAttributeIds(positionId);
-            var filled = await unitOfWork.UserAttributeRepository().GetAll()
-                .Where(ua => ua.UserId == userId && required.Contains(ua.AttributeId) && HasValue(ua))
-                .Select(ua => ua.AttributeId)
+
+            var rows = await unitOfWork.UserAttributeRepository().GetAll()
+                .Where(ua => ua.UserId == userId && required.Contains(ua.AttributeId))
                 .ToListAsync();
+
+            var filled = rows.Where(HasValue).Select(ua => ua.AttributeId).ToList();
 
             return required.Except(filled).Count();
         }
