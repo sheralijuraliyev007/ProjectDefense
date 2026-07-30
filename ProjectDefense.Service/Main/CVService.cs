@@ -132,9 +132,9 @@ namespace ProjectDefense.Service.Main
                 AttributeId = ua.AttributeId,
                 ValueGeneric = ua.ValueGeneric,
                 ValueNumeric = ua.ValueNumeric,
-                ValueDate = ua.ValueDate,
-                ValuePeriodStart = ua.ValuePeriodStart,
-                ValuePeriodEnd = ua.ValuePeriodEnd,
+                ValueDate = AsUtc(ua.ValueDate),
+                ValuePeriodStart = AsUtc(ua.ValuePeriodStart),
+                ValuePeriodEnd = AsUtc(ua.ValuePeriodEnd),
                 ValueBoolean = ua.ValueBoolean,
                 ValueOptionId = ua.ValueOptionId,
                 ValueContentId = ua.ValueContentId,
@@ -143,6 +143,9 @@ namespace ProjectDefense.Service.Main
             unitOfWork.CVAttributeRepository().AddRange(snapshotRows);
             await unitOfWork.CVAttributeRepository().SaveChanges();
         }
+
+        private static DateTime? AsUtc(DateTime? value) =>
+            value.HasValue ? DateTime.SpecifyKind(value.Value, DateTimeKind.Utc) : null;
 
 
 

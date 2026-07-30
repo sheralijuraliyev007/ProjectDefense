@@ -180,7 +180,7 @@ namespace ProjectDefense.Service.Main
             [AttributeDtypeConstants.OneOfMany] = (e, m) => e.ValueOptionId = m.ValueOptionId,
             [AttributeDtypeConstants.Image] = (e, m) => e.ValueContentId = m.ValueContentId,
             [AttributeDtypeConstants.Text] = (e, m) => e.ValueGeneric = m.ValueGeneric,
-            [AttributeDtypeConstants.Date] = (e, m) => e.ValueDate = m.ValueDate,
+            [AttributeDtypeConstants.Date] = (e, m) => e.ValueDate = AsUtc(m.ValueDate),
         };
 
         private static bool TryApplyValue(UserAttribute userAttribute, short dtypeCode, SetUserAttributeValueModel model)
@@ -197,10 +197,12 @@ namespace ProjectDefense.Service.Main
         private static bool TryApplyPeriod(UserAttribute userAttribute, SetUserAttributeValueModel model)
         {
             if (model.ValuePeriodStart is null || model.ValuePeriodEnd is null) return false;
-            userAttribute.ValuePeriodStart = model.ValuePeriodStart;
-            userAttribute.ValuePeriodEnd = model.ValuePeriodEnd;
+            userAttribute.ValuePeriodStart = AsUtc(model.ValuePeriodStart);
+            userAttribute.ValuePeriodEnd = AsUtc(model.ValuePeriodEnd);
             return true;
         }
+        private static DateTime? AsUtc(DateTime? value) =>
+    value.HasValue ? DateTime.SpecifyKind(value.Value, DateTimeKind.Utc) : null;
 
         private static UserAttributeDto ToDto(UserAttribute ua)
         {
