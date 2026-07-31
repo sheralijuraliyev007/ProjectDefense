@@ -1,18 +1,20 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Tabs, Tab, Card, CardBody, Chip, Spinner } from '@heroui/react';
+import { Tabs, Tab, Card, CardBody, Chip, Spinner, useDisclosure } from '@heroui/react';
 import { UserIcon, InformationCircleIcon, TrashIcon } from '@heroicons/react/24/outline';
 import DataTable from '../../components/shared/DataTable';
 import Toolbar from '../../components/shared/Toolbar';
 import AttributeValueField from '../../components/profile/AttributeValueField';
 import { useProfileAttributes } from '../../hooks/useProfileAttributes';
+import SyncToCrmModal from '../../components/profile/SyncToCrmModal';
 
 export default function ProfilePage() {
-  const { userId: targetUserId } = useParams(); // undefined on /profile, set on /admin/users/:userId/profile
+  const { userId: targetUserId } = useParams();
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('me');
   const [selectedAttrKeys, setSelectedAttrKeys] = useState(new Set());
+  const { isOpen: isCrmOpen, onOpen: onCrmOpen, onClose: onCrmClose } = useDisclosure();
 
   const {
     isLoading,
@@ -60,7 +62,18 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <h1 className="text-xl font-semibold">{t('profile.profile')}</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold">{t('profile.profile')}</h1>
+        {!targetUserId && (
+          <button
+            type="button"
+            onClick={onCrmOpen}
+            className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90"
+          >
+            {t('profile.syncToCrm', 'Sync to CRM')}
+          </button>
+        )}
+      </div>
 
       {targetUserId && (
         <div className="bg-warning-50 border border-warning-200 text-warning-700 text-sm rounded-lg px-4 py-2">
@@ -151,6 +164,8 @@ export default function ProfilePage() {
           </Card>
         </Tab>
       </Tabs>
+
+      <SyncToCrmModal isOpen={isCrmOpen} onClose={onCrmClose} />
     </div>
   );
 }

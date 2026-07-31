@@ -22,6 +22,11 @@ services:
       - EmailSettings__Port=587
       - EmailSettings__From=noreply@bookswapper.cc
       - EmailSettings__AppBaseUrl=https://projectdefense.studentlifehelper.com
+      - Salesforce__InstanceUrl=${SALESFORCE_INSTANCE_URL}
+      - Salesforce__TokenUrl=${SALESFORCE_TOKEN_URL}
+      - Salesforce__ClientId=${SALESFORCE_CLIENT_ID}
+      - Salesforce__ClientSecret=${SALESFORCE_CLIENT_SECRET}
+      - Salesforce__ApiVersion=v60.0
     env_file:
       - .env
     depends_on:

@@ -12,7 +12,7 @@ namespace ProjectDefense.Service.Main
 {
     public class UserAttributeService(IUnitOfWork unitOfWork, IUserHelper userHelper) : StatusGenericHandler, IUserAttributeService
     {
-        public const string VersionConflictMarker = "VERSION_CONFLICT";
+        
 
         public async Task<IStatusGeneric> AddAttributeAsync(int attributeId, Guid? targetUserId = null)
         {
@@ -112,7 +112,7 @@ namespace ProjectDefense.Service.Main
 
             if (entry.Version != model.Version)
             {
-                AddError(VersionConflictMarker);
+                AddError("VERSION_CONFLICT");
                 return (this, entry.Version);
             }
 

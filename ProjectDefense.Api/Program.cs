@@ -8,6 +8,7 @@ using ProjectDefense.Common.Settings.Cloudinary;
 using ProjectDefense.Common.Settings.Facebook;
 using ProjectDefense.Common.Settings.Google;
 using ProjectDefense.Common.Settings.Jwt;
+using ProjectDefense.Common.Settings.Salesforce;
 using ProjectDefense.Data.Context;
 using ProjectDefense.Data.Repositories;
 using ProjectDefense.Data.Repositories.Interfaces;
@@ -72,6 +73,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.Configure<GoogleAuthSettings>(builder.Configuration.GetSection("Authentication:Google"));
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
 builder.Services.Configure<GitHubAuthSettings>(builder.Configuration.GetSection("Authentication:GitHub"));
+builder.Services.Configure<SalesforceSettings>(builder.Configuration.GetSection("Salesforce"));
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<ISocialLoginProvider, GitHubLoginProvider>();
 
@@ -105,6 +107,7 @@ builder.Services.AddScoped<ILikeService, LikeService>();
 builder.Services.AddScoped<IDiscussionMessageService, DiscussionMessageService>();
 builder.Services.AddScoped<IPositionAccessService, PositionAccessService>();
 builder.Services.AddScoped<IContentService, ContentService>();
+builder.Services.AddScoped<ISalesforceService, SalesforceService>();
 builder.Services.AddScoped<IPositionRuleService, PositionRuleService>();
 //builder.Services.AddScoped<ISearchService, SearchService>();
 
