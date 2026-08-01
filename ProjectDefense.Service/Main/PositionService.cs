@@ -12,6 +12,7 @@ using ProjectDefense.Service.Main.Interfaces;
 using ProjectDefense.Service.Main.QueryObjects;
 using StatusGeneric;
 
+
 namespace ProjectDefense.Service.Main
 {
     public class PositionService(
@@ -211,5 +212,6 @@ namespace ProjectDefense.Service.Main
 
             await unitOfWork.PositionProjectTagRepository().SaveChanges();
         }
+        
     }
 }
