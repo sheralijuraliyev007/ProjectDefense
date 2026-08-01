@@ -42,7 +42,7 @@ namespace ProjectDefense.Api.Controllers
         public async Task<IActionResult> GenerateApiToken(int id)
         {
             var token = await positionExportService.GenerateApiTokenAsync(id);
-            return service.IsValid ? Ok(new ApiResponse<string> { Data = token }) : BadRequest(service.Errors);
+            return positionExportService.IsValid? Ok(new ApiResponse<string> { Data = token }) : BadRequest(positionExportService.Errors);
         }
 
         [AllowAnonymous]
@@ -50,8 +50,7 @@ namespace ProjectDefense.Api.Controllers
         public async Task<IActionResult> GetByToken(string token)
         {
             var positionDto = await positionExportService.GetByTokenAsync(token);
-            return service.IsValid && positionDto is not null ? Ok(new ApiResponse<PositionExportDto> { Data  = positionDto }) : BadRequest(service.Errors);
-
+            return positionExportService.IsValid && positionDto is not null ? Ok(new ApiResponse<PositionExportDto> { Data = positionDto }) : BadRequest(positionExportService.Errors);
         }
     }
 }
