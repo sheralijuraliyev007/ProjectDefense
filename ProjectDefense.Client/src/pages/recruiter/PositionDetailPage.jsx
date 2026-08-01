@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Card, CardBody, Button, Chip, Spinner, Input } from '@heroui/react';
+import { Card, CardBody, Button, Chip, Spinner, Input , useDisclosure} from '@heroui/react';
 import { ArrowLeftIcon, TrashIcon } from '@heroicons/react/24/outline';
 import positionApi from '../../api/positionApi';
 import positionRuleApi from '../../api/positionRuleApi';
 import attributeApi from '../../api/attributeApi';
+import ApiTokenModal from '../../components/positions/ApiTokenModal';
+
 
 const DTYPE = {
   STRING: 1, TEXT: 2, IMAGE: 3, NUMERIC: 4, DATE: 5, PERIOD: 6, BOOLEAN: 7, ONE_OF_MANY: 8,
@@ -47,6 +49,8 @@ export default function PositionDetailPage() {
   const { id } = useParams();
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { isOpen: isTokenOpen, onOpen: onTokenOpen, onClose: onTokenClose } = useDisclosure();
+
 
   const operatorsByDtype = useMemo(() => getOperatorsByDtype(t), [t]);
 
@@ -214,7 +218,7 @@ export default function PositionDetailPage() {
         <Button isIconOnly variant="light" onPress={() => navigate('/recruiter/positions')}>
           <ArrowLeftIcon className="w-5 h-5" />
         </Button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-bold">{position.title}</h1>
           <div className="flex items-center gap-2 mt-1">
             <Chip size="sm" color={position.isPublic ? 'success' : 'warning'} variant="flat">
@@ -223,7 +227,11 @@ export default function PositionDetailPage() {
             <Chip size="sm" variant="flat">{position.statusName}</Chip>
           </div>
         </div>
+        <Button size="sm" variant="flat" onPress={onTokenOpen}>
+          {t('positions.apiToken', 'API Token')}
+        </Button>
       </div>
+
 
       <Card>
         <CardBody>
@@ -328,6 +336,8 @@ export default function PositionDetailPage() {
           </CardBody>
         </Card>
       )}
+          <ApiTokenModal isOpen={isTokenOpen} onClose={onTokenClose} positionId={id} />
     </div>
+
   );
 }
