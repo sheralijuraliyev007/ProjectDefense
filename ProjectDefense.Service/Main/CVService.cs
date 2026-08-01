@@ -3,6 +3,7 @@ using ProjectDefense.Common.Constants;
 using ProjectDefense.Common.DTOs.Main;
 using ProjectDefense.Common.FilterOptions;
 using ProjectDefense.Common.Models.Main.CV;
+using ProjectDefense.Common.Models.Shared;
 using ProjectDefense.Data.Entities.MainEntities;
 using ProjectDefense.Data.Repositories.Interfaces;
 using ProjectDefense.Service.Common.Interfaces;
@@ -22,6 +23,21 @@ namespace ProjectDefense.Service.Main
     {
         protected override IQueryable<CV> GetAllQuery() =>
             _repository.GetAll(cv => cv.Position!, cv => cv.Status!);
+
+        public override async Task<PaginationModel<CvDto>> GetAllAsync(CVFilterOptions filterOptions)
+        {
+            var callerId = _userHelper.GetUserId();
+            if (callerId == null) { AddError("You are not logged in"); return new PaginationModel<CvDto>(); }
+
+            bool isAdmin = await unitOfWork.UserRoleRepository().GetAll()
+                .AnyAsync(ur => ur.UserId == callerId && ur.RoleCode == RoleConstants.Administrator);
+
+           
+            if (!isAdmin)
+                filterOptions.UserId = callerId;
+
+            return await base.GetAllAsync(filterOptions);
+        }
 
         protected override IQueryable<CV> ApplyFilter(IQueryable<CV> query, CVFilterOptions filters) =>
             query.ApplyFilter(filters);
@@ -148,6 +164,25 @@ namespace ProjectDefense.Service.Main
             value.HasValue ? DateTime.SpecifyKind(value.Value, DateTimeKind.Utc) : null;
 
 
+        public override async Task<CvDto?> GetByIdAsync<TId>(TId id)
+        {
+            var cv = await _repository.GetById(id);
+            if (cv == null) { AddError("Not found"); return null; }
+
+            var callerId = _userHelper.GetUserId();
+            if (callerId == null) { AddError("You are not logged in"); return null; }
+
+            bool isAdmin = await unitOfWork.UserRoleRepository().GetAll()
+                .AnyAsync(ur => ur.UserId == callerId && ur.RoleCode == RoleConstants.Administrator);
+
+            if (!isAdmin && cv.UserId != callerId)
+            {
+                AddError("Not found");
+                return null;
+            }
+
+            return await base.GetByIdAsync(id);
+        }
 
         public async Task<List<UserAttributeDto>> GetCvAttributesAsync(long cvId)
         {

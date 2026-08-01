@@ -14,6 +14,8 @@ namespace ProjectDefense.Service.Main.QueryObjects
 
             if (options.StatusCode.HasValue)
                 query = query.Where(cv => cv.StatusCode == options.StatusCode);
+            if(options.UserId.HasValue)
+                query = query.Where(cv => cv.UserId == options.UserId);
 
             query = query.ApplyBaseFilter(options);
             return query;
