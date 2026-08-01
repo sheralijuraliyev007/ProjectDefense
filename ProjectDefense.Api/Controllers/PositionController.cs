@@ -8,7 +8,7 @@ using ProjectDefense.Service.Main.Interfaces;
 
 namespace ProjectDefense.Api.Controllers
 {
-    public class PositionController(IPositionService service)
+    public class PositionController(IPositionService service, IPositionExportService positionExportService)
         : BaseMainController<IPositionService, PositionFilterOptions, PositionDto, PositionCreateModel, PositionUpdateModel>(service)
     {
         [HttpPut("{id:int}/attributes")]
@@ -41,7 +41,7 @@ namespace ProjectDefense.Api.Controllers
         [HttpPost("{id:int}/generate-api-token")]
         public async Task<IActionResult> GenerateApiToken(int id)
         {
-            var token = await service.GenerateApiTokenAsync(id);
+            var token = await positionExportService.GenerateApiTokenAsync(id);
             return service.IsValid ? Ok(new ApiResponse<string> { Data = token }) : BadRequest(service.Errors);
         }
 
@@ -49,7 +49,7 @@ namespace ProjectDefense.Api.Controllers
         [HttpGet("by-token/{token}")]
         public async Task<IActionResult> GetByToken(string token)
         {
-            var positionDto = await service.GetByTokenAsync(token);
+            var positionDto = await positionExportService.GetByTokenAsync(token);
             return service.IsValid && positionDto is not null ? Ok(new ApiResponse<PositionExportDto> { Data  = positionDto }) : BadRequest(service.Errors);
 
         }
