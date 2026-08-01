@@ -73,10 +73,12 @@ namespace ProjectDefense.Service.Main
         private static AttributeAggregateDto BuildEmptyAggregate(Data.Entities.MainEntities.Attribute attribute) => new()
         {
             Name = attribute.Name,
-            Type = "Unsupported",
+            Type = AttributeDtypeConstants.DtypeNames[attribute.DtypeCode],
             AggregatedResult = "Aggregation not supported for this attribute type",
             RawValues = new()
         };
+
+        
 
         private async Task<AttributeAggregateDto> BuildTextAggregateAsync(int positionId, Data.Entities.MainEntities.Attribute attribute)
         {
