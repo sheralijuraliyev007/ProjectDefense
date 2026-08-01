@@ -8,5 +8,4 @@
         public string ClientSecret { get; set; } = null!;
         public string ApiVersion { get; set; } = "v60.0";
     }
-    }
 }
