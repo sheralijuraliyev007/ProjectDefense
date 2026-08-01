@@ -109,6 +109,7 @@ builder.Services.AddScoped<IPositionAccessService, PositionAccessService>();
 builder.Services.AddScoped<IContentService, ContentService>();
 builder.Services.AddScoped<ISalesforceService, SalesforceService>();
 builder.Services.AddScoped<IPositionRuleService, PositionRuleService>();
+builder.Services.AddScoped<IPositionExportService, PositionExportService>();
 //builder.Services.AddScoped<ISearchService, SearchService>();
 
 

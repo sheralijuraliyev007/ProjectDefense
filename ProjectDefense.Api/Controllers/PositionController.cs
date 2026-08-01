@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using ProjectDefense.Common.DTOs.Main;
 using ProjectDefense.Common.FilterOptions;
 using ProjectDefense.Common.Models.Main.Position;
@@ -35,6 +36,22 @@ namespace ProjectDefense.Api.Controllers
         {
             var result = await service.GetAttributesAsync(id);
             return Ok(new ApiResponse<List<AttributeDto>> { Data = result });
+        }
+
+        [HttpPost("{id:int}/generate-api-token")]
+        public async Task<IActionResult> GenerateApiToken(int id)
+        {
+            var token = await service.GenerateApiTokenAsync(id);
+            return service.IsValid ? Ok(new ApiResponse<string> { Data = token }) : BadRequest(service.Errors);
+        }
+
+        [AllowAnonymous]
+        [HttpGet("by-token/{token}")]
+        public async Task<IActionResult> GetByToken(string token)
+        {
+            var positionDto = await service.GetByTokenAsync(token);
+            return service.IsValid && positionDto is not null ? Ok(new ApiResponse<PositionExportDto> { Data  = positionDto }) : BadRequest(service.Errors);
+
         }
     }
 }

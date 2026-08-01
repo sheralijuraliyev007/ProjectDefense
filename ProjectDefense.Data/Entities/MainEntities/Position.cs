@@ -41,5 +41,8 @@ namespace ProjectDefense.Data.Entities.MainEntities
         [Required]
         [Column("version")]
         public int Version { get; set; } = 1;
+
+        [Column("api_token")]
+        public string? ApiToken { get; set; }
     }
 }

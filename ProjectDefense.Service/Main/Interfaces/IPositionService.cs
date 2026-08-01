@@ -11,5 +11,7 @@ namespace ProjectDefense.Service.Main.Interfaces
         Task<IStatusGeneric> SetProjectTagsAsync(int positionId, List<string> tagLabels);
         Task<int?> DuplicateAsync(int positionId);
         Task<List<AttributeDto>> GetAttributesAsync(int positionId);
+
+
     }
 }
