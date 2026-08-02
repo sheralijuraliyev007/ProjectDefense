@@ -110,6 +110,9 @@ builder.Services.AddScoped<IContentService, ContentService>();
 builder.Services.AddScoped<ISalesforceService, SalesforceService>();
 builder.Services.AddScoped<IPositionRuleService, PositionRuleService>();
 builder.Services.AddScoped<IPositionExportService, PositionExportService>();
+builder.Services.AddScoped<ISupportTicketService, SupportTicketService>();
+
+builder.Services.AddScoped<IDropBoxService, DropBoxService>();
 //builder.Services.AddScoped<ISearchService, SearchService>();
 
 
