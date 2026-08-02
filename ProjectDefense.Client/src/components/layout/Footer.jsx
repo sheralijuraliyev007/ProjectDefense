@@ -8,11 +8,11 @@ export default function Footer() {
 
   return (
     <footer className="border-t border-default-200 py-4 mt-auto">
-      <div className="container mx-auto px-4 text-center text-sm text-default-500">
+      <div className="container mx-auto px-4 flex flex-col items-center gap-2 text-sm text-default-500">
         <p>CV Manager</p>
         <button
           onClick={() => setTicketOpen(true)}
-          className="underline text-default-500 hover:text-default-700 mt-1"
+          className="px-4 py-2 rounded-md bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors"
         >
           Create support ticket
         </button>
