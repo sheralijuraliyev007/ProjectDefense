@@ -21,11 +21,15 @@ namespace ProjectDefense.Service.Main
             if (userId == null) { AddError("User is not authenticated."); return; }
             var dto = await GetDto(userId.Value, createSupportTicketModel);
 
-            var jsonString = JsonSerializer.Serialize(dto);
+            var options = new JsonSerializerOptions
+            {
+                Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
+            };
+            var jsonString = JsonSerializer.Serialize(dto, options);
 
-            
 
-             await dropBoxService.UploadJsonAsync($"{userId}_{DateTime.UtcNow:yyyyMMddHHmmss}.json", jsonString);
+
+            await dropBoxService.UploadJsonAsync($"{userId}_{DateTime.UtcNow:yyyyMMddHHmmss}.json", jsonString);
 
 
         }
@@ -56,7 +60,7 @@ namespace ProjectDefense.Service.Main
                     .FirstOrDefaultAsync();
 
             var userRoles = await unitOfWork.UserRoleRepository().GetAll(ur => ur.Role).Where(x => x.UserId == userId).Select(ur=> ur.Role).ToListAsync();
-            return $"{userFirstname}, roles : {string.Join(", ", userRoles.Select(r => r.Name))} )";
+            return $"{userFirstname}, roles : {string.Join(", ", userRoles.Select(r => r.Name))}";
 
         }
 
