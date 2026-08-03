@@ -26,13 +26,24 @@ namespace ProjectDefense.Service.Infrastructure
         private string? _cachedToken;
         private DateTime _tokenExpiresAtUtc;
 
-        public async Task<SyncToCrmResultModel> SyncCurrentUserToCrmAsync(SyncToCrmRequestModel form, CancellationToken ct)
+        public async Task<CrmSyncStatus> SyncCurrentUserToCrmAsync(SyncToCrmRequestModel form, CancellationToken ct)
         {
-            var user = await GetCurrentUserAsync(ct);
-            var token = await GetAccessTokenAsync(ct);
-            var accountId = await CreateAccountAsync(token, form, user.FirstName, user.LastName, ct);
-            var contactId = await CreateContactAsync(token, form, user.FirstName, user.LastName, user.Email, accountId, ct);
-            return BuildSuccessResult(accountId, contactId);
+            try
+            {
+                var user = await GetCurrentUserAsync(ct);
+                var token = await GetAccessTokenAsync(ct);
+                var accountId = await CreateAccountAsync(token, form, user.FirstName, user.LastName, ct);
+                var contactId = await CreateContactAsync(token, form, user.FirstName, user.LastName, user.Email, accountId, ct);
+                return new CrmSyncStatus { Success = true, Data = BuildSuccessResult(accountId, contactId) };
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("DUPLICATES_DETECTED"))
+            {
+                return new CrmSyncStatus { ErrorCode = "duplicate", Message = "A matching record already exists in Salesforce." };
+            }
+            catch (InvalidOperationException ex)
+            {
+                return new CrmSyncStatus { ErrorCode = "validation", Message = ex.Message };
+            }
         }
 
         private record CurrentUserCrmInfo(string FirstName, string LastName, string Email);
@@ -155,6 +166,7 @@ namespace ProjectDefense.Service.Infrastructure
         {
             var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = JsonContent.Create(payload) };
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            request.Headers.Add("Sforce-Duplicate-Rule-Header", "allowSave=true;includeRecordDetails=false;runAsCurrentUser=true");
             return request;
         }
 
@@ -197,5 +209,14 @@ namespace ProjectDefense.Service.Infrastructure
     {
         [JsonPropertyName("access_token")] public string AccessToken { get; set; } = null!;
         [JsonPropertyName("instance_url")] public string InstanceUrl { get; set; } = null!;
+    }
+
+    public class CrmSyncStatus
+    {
+        public bool Success { get; init; }
+        public string? ErrorCode { get; init; }   
+        public string? Message { get; init; }
+        public string? ExistingId { get; init; }
+        public SyncToCrmResultModel? Data { get; init; }
     }
 }

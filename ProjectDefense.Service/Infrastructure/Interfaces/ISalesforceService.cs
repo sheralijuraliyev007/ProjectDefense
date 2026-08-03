@@ -4,7 +4,7 @@ namespace ProjectDefense.Service.Infrastructure.Interfaces
 {
     public interface ISalesforceService
     {
-        Task<SyncToCrmResultModel> SyncCurrentUserToCrmAsync(
+        Task<CrmSyncStatus> SyncCurrentUserToCrmAsync(
             SyncToCrmRequestModel form,
             CancellationToken cancellationToken = default);
     }

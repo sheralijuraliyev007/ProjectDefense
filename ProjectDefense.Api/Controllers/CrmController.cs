@@ -15,16 +15,12 @@ namespace ProjectDefense.Controllers
         {
             try
             {
-                var result = await salesforceService.SyncCurrentUserToCrmAsync(form, ct);
-                return Ok(result);
+                var status = await salesforceService.SyncCurrentUserToCrmAsync(form, ct);
+                return status.Success ? Ok(status.Data) : BadRequest(status);
             }
             catch (UnauthorizedAccessException ex)
             {
                 return Unauthorized(ex.Message);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(ex.Message);
             }
         }
     }
