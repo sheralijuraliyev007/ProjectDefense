@@ -19,7 +19,11 @@ export default function SyncToCrmModal({ isOpen, onClose }) {
       const response = await crmApi.sync(form);
       setResult(response.data);
     } catch (err) {
-        setError(err.response?.data?.message || 'Failed to sync to Salesforce.');
+        if (err.response?.data?.errorCode === 'already_synced') {
+          setError("You've already synced to Salesforce. No need to do it again!");
+        } else {
+          setError(err.response?.data?.message || 'Failed to sync to Salesforce.');
+    }
     } finally {
       setIsSubmitting(false);
     }
