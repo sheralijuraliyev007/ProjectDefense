@@ -50,6 +50,9 @@ export default function ApiTokenModal({ isOpen, onClose, positionId }) {
                 {t('positions.apiTokenHint', 'Use this URL in Odoo to import this position\'s aggregated results.')}
               </p>
               <div className="bg-default-100 rounded-lg p-3 text-xs font-mono break-all">
+                {token}
+              </div>
+              <div className="bg-default-100 rounded-lg p-3 text-xs font-mono break-all">
                 {exportUrl}
               </div>
               <Button size="sm" variant="flat" onPress={handleCopy}>
