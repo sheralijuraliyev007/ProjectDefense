@@ -47,7 +47,7 @@ export default function ApiTokenModal({ isOpen, onClose, positionId }) {
           {token ? (
             <div className="space-y-3">
               <p className="text-default-500 text-sm">
-                {t('positions.apiTokenHint', 'Use this URL in Odoo to import this position\'s aggregated results.')}
+                {t('positions.apiTokenHint', 'Use this token in Odoo to import this position\'s aggregated results.')}
               </p>
               <div className="bg-default-100 rounded-lg p-3 text-xs font-mono break-all">
                 {token}
