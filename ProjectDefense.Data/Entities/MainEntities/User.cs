@@ -45,5 +45,11 @@ namespace ProjectDefense.Data.Entities.MainEntities
 
         [InverseProperty(nameof(UserRole.User))]
         public virtual List<UserRole> UserRoles { get; set; } = new();
+
+
+        [Required]
+        [Column("is_synced_to_crm")]
+        public bool  IsSyncedToCrm { get; set; }
+
     }
 }

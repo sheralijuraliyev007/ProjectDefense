@@ -28,21 +28,34 @@ namespace ProjectDefense.Service.Infrastructure
 
         public async Task<CrmSyncStatus> SyncCurrentUserToCrmAsync(SyncToCrmRequestModel form, CancellationToken ct)
         {
+            var userId = userHelper.GetUserId() ?? throw new UnauthorizedAccessException("No user id claim found.");
+            var userEntity = await unitOfWork.UserRepository().GetAll().FirstOrDefaultAsync(u => u.Id == userId, ct)
+                ?? throw new InvalidOperationException("User not found.");
+
+            if (userEntity.IsSyncedToCrm)
+            {
+                return new CrmSyncStatus { ErrorCode = "already_synced", Message = "You've already synced to Salesforce." };
+            }
+
             try
             {
                 var user = await GetCurrentUserAsync(ct);
                 var token = await GetAccessTokenAsync(ct);
                 var accountId = await CreateAccountAsync(token, form, user.FirstName, user.LastName, ct);
                 var contactId = await CreateContactAsync(token, form, user.FirstName, user.LastName, user.Email, accountId, ct);
+
+                userEntity.IsSyncedToCrm = true;
+                await unitOfWork.SaveChanges();
+
                 return new CrmSyncStatus { Success = true, Data = BuildSuccessResult(accountId, contactId) };
-            }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("DUPLICATES_DETECTED"))
-            {
-                return new CrmSyncStatus { ErrorCode = "duplicate", Message = "A matching record already exists in Salesforce." };
             }
             catch (InvalidOperationException ex)
             {
-                return new CrmSyncStatus { ErrorCode = "validation", Message = ex.Message };
+                var message = ex.Message.Contains("DUPLICATES_DETECTED")
+                    ? "A matching record already exists in Salesforce."
+                    : ex.Message;
+
+                return new CrmSyncStatus { ErrorCode = "sync_failed", Message = message };
             }
         }
 
